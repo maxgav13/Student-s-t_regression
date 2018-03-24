@@ -1,4 +1,4 @@
-# Student-s-t_regression
+# Student's t regression
 
 The purpose of this project is to demonstrate the advantages of the Student's t distribution for linear regression with outliers, particularly within a [Bayesian framework](https://www.youtube.com/channel/UCNJK6_DZvcMqNSzQdEkzvzA/playlists).
 
