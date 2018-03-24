@@ -365,7 +365,7 @@ b1 &lt;-
 ## 1 b_Intercept    0.120    0.110  -0.0500 0.300
 ## 2 b_x            0.150    0.130  -0.0600 0.370
 ## 3 sigma          1.11     0.0800  0.980  1.24</code></pre>
-<p>These should look familiar. They’re very much like the results from the OLS models. Hopefully this isn’t surprising. Our priors were quite week, so there’s no reason to suspect the results would differ much.</p>
+<p>These should look familiar. They’re very much like the results from the OLS models. Hopefully this isn’t surprising. Our priors were quite weak, so there’s no reason to suspect the results would differ much.</p>
 <div id="the-loo-and-other-goodies-help-with-diagnostics." class="section level3">
 <h3>The LOO and other goodies help with diagnostics.</h3>
 <p>With the <code>loo()</code> function, we’ll extract loo objects, which contain some handy output. We’ll use <code>str()</code> to get a sense of what’s all in there.</p>
@@ -632,6 +632,7 @@ loo_b4 &lt;- loo(b4)</code></pre>
 ## b2 - b4   3.76  4.07
 ## b3 - b4   1.41  0.89</code></pre>
 <p>In terms of the LOO, <code>b2</code> through <code>b4</code> were about the same, but all looked better than <code>b1</code>. In fairness, though, the standard errors for the difference scores were a bit on the wide side.</p>
+<p>If you’re new to using information criteria to compare models, you might sit down and soak in <a href="https://www.youtube.com/watch?v=t0pRuy1_190&amp;list=PLDcUM9US4XdM9_N6XUUFrhghGJ4K25bFc&amp;index=8">this lecture on the topic</a> and <a href="https://cran.r-project.org/web/packages/loo/vignettes/loo-example.html">this vignette</a> on the LOO in particular. For a more technical introduction, you might check out the references in the loo package’s <a href="https://cran.r-project.org/web/packages/loo/loo.pdf">reference manual</a>.</p>
 </div>
 </div>
 <div id="lets-compare-a-few-bayesian-models" class="section level2">
@@ -686,7 +687,7 @@ ggplot(data = fitted_bs,
 </div>
 <div id="but-what-if-you-dont-need-students-t" class="section level2">
 <h2>But what if you don’t need Student’s t?</h2>
-<p>I while back (before I fell in love with Bayes), I submitted a paper in which we used a robust frequentist estimator (i.e., MLR). One of the reviewers was unfamiliar with robust estimators and asked what would happen if we used a robust estimator when a traditional non-robust estimator (i.e., ML) was good enough. In response, we ran a little simulation study to demonstrate that in such a case, there was little to fear. You’d get the same results within rounding error.</p>
+<p>A while back (before I fell in love with Bayes), I submitted a paper in which we used a robust frequentist estimator (i.e., MLR). One of the reviewers was unfamiliar with robust estimators and asked what would happen if we used a robust estimator when a traditional non-robust estimator (i.e., ML) was good enough. In response, we ran a little simulation study to demonstrate that in such a case, there was little to fear. You’d get the same results within rounding error.</p>
 <p>So, what would happen if we used the Student’s t likelihood with our well-behaved <code>d</code> data? Will the results look like those from <code>b0</code>, the Gaussian model of the <code>d</code> data? To answer the question, we’ll first re-fit the Student-t models <code>b2</code> through <code>b4</code>, this time switching out the nasty outlier <code>o</code> data for the nicely-Gaussian <code>d</code> data.</p>
 <pre class="r"><code>b2_data_d &lt;- 
   brm(data = d, family = student,

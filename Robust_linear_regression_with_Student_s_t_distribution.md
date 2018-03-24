@@ -352,9 +352,9 @@ tidy(b1) %>% slice(1:3) %>% mutate_if(is.double, round, digits = 2)
 ## 3 sigma          1.11     0.0800  0.980  1.24
 ```
 
-These should look familiar. They're very much like the results from the OLS models. Hopefully this isn't surprising. Our priors were quite week, so there's no reason to suspect the results would differ much.
+These should look familiar. They're very much like the results from the OLS models. Hopefully this isn't surprising. Our priors were quite weak, so there's no reason to suspect the results would differ much.
 
-###The LOO and other goodies help with diagnostics.
+### The LOO and other goodies help with diagnostics.
 
 With the `loo()` function, we'll extract loo objects, which contain some handy output. We'll use `str()` to get a sense of what's all in there.
 
@@ -492,7 +492,7 @@ loo_b0$pareto_k %>%  # The well-behaived data
 
 So with `b0`--the model based on the well-behaved multivariate normal data, `d`--, all the `pareto_k` values hovered around zero in the "good" range. Things got icky with model `b1`. But we know all that. Let's move forward.
 
-###What do we do with those overly-influential outlying values?
+### What do we do with those overly-influential outlying values?
 
 A typical way to handle outlying values is to delete them based on some criterion, such as the Mahalanobis distance, Cook's $D_{i}$, or our new friend, the `pareto_k`. In our next two models, we'll do that. In our `data` arguments, we can use the `slice()` function to omit cases. In model `b1.1`, we simply omit the first and most influential case. In model `b1.2`, we omitted both unduly-influential cases, the values from rows 1 and 2.
 
@@ -750,6 +750,8 @@ compare_ic(loo_b1, loo_b2, loo_b3, loo_b4)
 
 In terms of the LOO, `b2` through `b4` were about the same, but all looked better than `b1`. In fairness, though, the standard errors for the difference scores were a bit on the wide side.
 
+If you're new to using information criteria to compare models, you might sit down and soak in [this lecture on the topic](https://www.youtube.com/watch?v=t0pRuy1_190&list=PLDcUM9US4XdM9_N6XUUFrhghGJ4K25bFc&index=8) and [this vignette](https://cran.r-project.org/web/packages/loo/vignettes/loo-example.html) on the LOO in particular. For a more technical introduction, you might check out the references in the loo package's [reference manual](https://cran.r-project.org/web/packages/loo/loo.pdf).
+
 ## Let's compare a few Bayesian models
 
 That's enough with coefficients, `pareto_k`, and the LOO. Let's get a sense of the implications of the models by comparing a few in plots.
@@ -808,7 +810,7 @@ For each subplot, the gray band is the 95% interval band and the overlapping lig
 
 ## But what if you don't need Student's t?
 
-I while back (before I fell in love with Bayes), I submitted a paper in which we used a robust frequentist estimator (i.e., MLR). One of the reviewers was unfamiliar with robust estimators and asked what would happen if we used a robust estimator when a traditional non-robust estimator (i.e., ML) was good enough. In response, we ran a little simulation study to demonstrate that in such a case, there was little to fear. You’d get the same results within rounding error.
+A while back (before I fell in love with Bayes), I submitted a paper in which we used a robust frequentist estimator (i.e., MLR). One of the reviewers was unfamiliar with robust estimators and asked what would happen if we used a robust estimator when a traditional non-robust estimator (i.e., ML) was good enough. In response, we ran a little simulation study to demonstrate that in such a case, there was little to fear. You’d get the same results within rounding error.
 
 So, what would happen if we used the Student’s t likelihood with our well-behaved `d` data? Will the results look like those from `b0`, the Gaussian model of the `d` data? To answer the question, we’ll first re-fit the Student-t models `b2` through `b4`, this time switching out the nasty outlier `o` data for the nicely-Gaussian `d` data. 
 
