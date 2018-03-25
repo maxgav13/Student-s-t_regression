@@ -174,7 +174,7 @@ ggplot(data = o, aes(x = x, y = y, color = y > 3)) +
 
 The two outliers were quite influential on the slope. It went from a nice clear diagonal to almost horizontal. You'll also note how the 95% intervals (i.e., the bowtie shape) were a bit wider when based on the `o` data.
 
-One of the popular ways to quantify outlier status is with Mahalanobis' distance. However, the Mahalanobis distance is valid for multivariate normal data. Though the data in this example are indeed multivariate normal--or at least they were before we injected two outlying values into them--I am going to resist relying on Mahalanobis' distance. There are other more general approaches. The `broom::augment()` function will give us access to one.
+One of the popular ways to quantify outlier status is with Mahalanobis' distance. However, the Mahalanobis distance is primarilly valid for multivariate normal data. Though the data in this example are indeed multivariate normal--or at least they were before we injected two outlying values into them--I am going to resist relying on Mahalanobis' distance. There are other more general approaches that will be of greater use when you need to explore other variants of the generalized linear model. The `broom::augment()` function will give us access to one.
 
 ```{r}
 aug0 <- augment(fit0)
@@ -645,6 +645,7 @@ Note. The analyses in this document were done with:
 * broom     0.4.3
 * brms      2.1.9
 * rstan     2.17.3
+* loo       1.1.0
 
 ```{r, echo = F, eval = F}
 rm(nu, s, m, d, o, fit0, fit1, aug0, aug1, b0, b1, b1.1, b1.2, b2, b3, b4, loo_b0, loo_b1, loo_b2, loo_b3, loo_b4, b_estimates, b2_data_d, b3_data_d, b4_data_d, nd, fitted_bs)
