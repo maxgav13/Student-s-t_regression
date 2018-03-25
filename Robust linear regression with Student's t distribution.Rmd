@@ -132,10 +132,14 @@ With the code, above, we replaced the first two values of our first variable, wh
 
 To get a quick sense of what we've done, we'll first fit two models with OLS regression. The first model, `fit0`, is of the multivariate normal data, `d`. The second model, `fit1`, is on the otherwise identical data with the two odd and influential values, `o`.
 
-```{r, message = F, warning = F}
+```{r}
 fit0 <- lm(data = d, y ~ 1 + x)
 fit1 <- lm(data = o, y ~ 1 + x)
+```
 
+We'll use the [broom package](https://cran.r-project.org/web/packages/broom/index.html) to assist with model summaries and other things.
+
+```{r, message = F, warning = F}
 library(broom)
 
 tidy(fit0) %>% mutate_if(is.double, round, digits = 2)
@@ -636,6 +640,7 @@ Note. The analyses in this document were done with:
 * RStudio   1.1.442
 * rmarkdown 1.8
 * tidyverse 1.2.1
+* viridis   0.4.0
 * MASS      7.3-47
 * broom     0.4.3
 * brms      2.1.9

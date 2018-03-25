@@ -187,7 +187,12 @@ To get a quick sense of what we've done, we'll first fit two models with OLS reg
 ```r
 fit0 <- lm(data = d, y ~ 1 + x)
 fit1 <- lm(data = o, y ~ 1 + x)
+```
 
+We'll use the [broom package](https://cran.r-project.org/web/packages/broom/index.html) to assist with model summaries and other things.
+
+
+```r
 library(broom)
 
 tidy(fit0) %>% mutate_if(is.double, round, digits = 2)
@@ -224,7 +229,7 @@ ggplot(data = d, aes(x = x, y = y)) +
   theme(panel.grid = element_blank())
 ```
 
-![](Robust_linear_regression_with_Student_s_t_distribution_files/figure-html/unnamed-chunk-10-1.png)<!-- -->
+![](Robust_linear_regression_with_Student_s_t_distribution_files/figure-html/unnamed-chunk-11-1.png)<!-- -->
 
 ```r
 # The data with two outliers
@@ -240,7 +245,7 @@ ggplot(data = o, aes(x = x, y = y, color = y > 3)) +
         legend.position = "none")
 ```
 
-![](Robust_linear_regression_with_Student_s_t_distribution_files/figure-html/unnamed-chunk-10-2.png)<!-- -->
+![](Robust_linear_regression_with_Student_s_t_distribution_files/figure-html/unnamed-chunk-11-2.png)<!-- -->
 
 The two outliers were quite influential on the slope. It went from a nice clear diagonal to almost horizontal. You'll also note how the 95% intervals (i.e., the bowtie shape) were a bit wider when based on the `o` data.
 
@@ -289,7 +294,7 @@ aug0 %>%  # The well-behaived data
     facet_wrap(~fit)
 ```
 
-![](Robust_linear_regression_with_Student_s_t_distribution_files/figure-html/unnamed-chunk-12-1.png)<!-- -->
+![](Robust_linear_regression_with_Student_s_t_distribution_files/figure-html/unnamed-chunk-13-1.png)<!-- -->
 
 For the model of the well-behaved data, `fit0`, we have $D_{i}$ values all hovering near zero. However, the plot for `fit1` shows one $D_{i}$ value well above the 0.5 level and another not quite that high but deviant relative to the rest. Our two outlier values look quite influential for the results of `fit1`.
 
@@ -463,7 +468,7 @@ With the simple `plot()` function, we can get a diagnostic plot for the `pareto_
 plot(loo_b1)
 ```
 
-![](Robust_linear_regression_with_Student_s_t_distribution_files/figure-html/unnamed-chunk-20-1.png)<!-- -->
+![](Robust_linear_regression_with_Student_s_t_distribution_files/figure-html/unnamed-chunk-21-1.png)<!-- -->
 
 There they are, cases 1 and 2, lurking in the "bad" and "[just] ok" ranges. We can also make a similar plot with ggplot2. Though it takes a little more work, ggplot2 makes it easy to compare `pareto_k` plots across models with a little faceting.
 
@@ -488,7 +493,7 @@ loo_b0$pareto_k %>%  # The well-behaived data
   facet_wrap(~fit)
 ```
 
-![](Robust_linear_regression_with_Student_s_t_distribution_files/figure-html/unnamed-chunk-21-1.png)<!-- -->
+![](Robust_linear_regression_with_Student_s_t_distribution_files/figure-html/unnamed-chunk-22-1.png)<!-- -->
 
 So with `b0`--the model based on the well-behaved multivariate normal data, `d`--, all the `pareto_k` values hovered around zero in the "good" range. Things got icky with model `b1`. But we know all that. Let's move forward.
 
@@ -578,7 +583,7 @@ ggplot(data = tibble(x = seq(from = 0, to = 60, by = .1)),
   theme(panel.grid = element_blank())
 ```
 
-![](Robust_linear_regression_with_Student_s_t_distribution_files/figure-html/unnamed-chunk-25-1.png)<!-- -->
+![](Robust_linear_regression_with_Student_s_t_distribution_files/figure-html/unnamed-chunk-26-1.png)<!-- -->
 
 So the default prior is centered around values in the 2 to 30 range, but has a long gentle-sloping tail, allowing the model to yield much larger values for $\nu$, as needed. The prior we use below is almost entirely concentrated in the single-digit range. In this case, that will preference Student's t likelihoods with very small $\nu$ parameters and correspondingly thick tails--easily allowing for extreme values.
 
@@ -675,7 +680,7 @@ b_estimates %>%
         axis.text.y = element_text(hjust = 0))
 ```
 
-![](Robust_linear_regression_with_Student_s_t_distribution_files/figure-html/unnamed-chunk-30-1.png)<!-- -->
+![](Robust_linear_regression_with_Student_s_t_distribution_files/figure-html/unnamed-chunk-31-1.png)<!-- -->
 
 You might think of the `b0` slope as the "true" slope. That's the one estimated from the well-behaved multivariate normal data, `d`. That estimate's just where we'd want it to be. The `b1` slope is a disaster--way lower than the others. The slopes for `b1.1` and `b1.2` get better, but at the expense of deleting data. All three of our Student's t models produced slopes that were pretty close to the `b0` slope. They weren't perfect, but, all in all, Students t did pretty okay.
 
@@ -725,7 +730,7 @@ loo_b1$pareto_k %>%
     facet_wrap(~fit)
 ```
 
-![](Robust_linear_regression_with_Student_s_t_distribution_files/figure-html/unnamed-chunk-32-1.png)<!-- -->
+![](Robust_linear_regression_with_Student_s_t_distribution_files/figure-html/unnamed-chunk-33-1.png)<!-- -->
 
 Oh man, those Student's t models made our world shiny! In a succession from `b2` through `b4`, each model looked better by `pareto_k`. All were way better than the typical Gaussian model, `b1`. While we're at it, we might compare those for with their LOO values.
 
@@ -804,7 +809,7 @@ ggplot(data = fitted_bs,
   facet_wrap(~model)
 ```
 
-![](Robust_linear_regression_with_Student_s_t_distribution_files/figure-html/unnamed-chunk-34-1.png)<!-- -->
+![](Robust_linear_regression_with_Student_s_t_distribution_files/figure-html/unnamed-chunk-35-1.png)<!-- -->
 
 For each subplot, the gray band is the 95% interval band and the overlapping light gray line is the posterior mean. Model `b0`, recall, is our baseline comparison model. This is of the well-behaved no-outlier data, `d`, using the good old Gaussian likelihood. Model `b1` is of the outlier data, `o`, but still using the non-robust Gaussian likelihood. Model `b3` uses a robust Student's t likelihood with $\nu$ estimated with the fairly narrow gamma(4, 1) prior. For my money, `b3` did a pretty good job.
 
@@ -883,7 +888,7 @@ tidy(b0) %>%
   facet_grid(~term, scales = "free_x")
 ```
 
-![](Robust_linear_regression_with_Student_s_t_distribution_files/figure-html/unnamed-chunk-36-1.png)<!-- -->
+![](Robust_linear_regression_with_Student_s_t_distribution_files/figure-html/unnamed-chunk-37-1.png)<!-- -->
 
 Happily, the intercepts and slopes were near equivalent across the four models. If those were your parameters of interest, it seems like switching to a robust Student's t likelihood didn't hurt anything for our well-behaved `d` data. Note, though, that $\sigma$ changed a bit across models. This is because $\sigma$ means something different when you switch from the Gaussian to a lower-$\nu$ Student's t. When you use the Gaussian, $\sigma$ is the standard deviation and $\sigma^2$ is the variance. However, once you use a sub-infinite $\nu$, $\sigma$ is now referred to as the scale parameter and no longer corresponds to the standard deviation. When $\nu$ is quite large, the difference shouldn't be as large. But as your $\nu$s approach 1, the discrepancy between the scale and the standard deviation grows.
 
@@ -920,6 +925,7 @@ Note. The analyses in this document were done with:
 * RStudio   1.1.442
 * rmarkdown 1.8
 * tidyverse 1.2.1
+* viridis   0.4.0
 * MASS      7.3-47
 * broom     0.4.3
 * brms      2.1.9

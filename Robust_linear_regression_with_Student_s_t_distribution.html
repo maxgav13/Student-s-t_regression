@@ -259,9 +259,9 @@ head(o)</code></pre>
 <h1>Frequentist OLS Models</h1>
 <p>To get a quick sense of what we’ve done, we’ll first fit two models with OLS regression. The first model, <code>fit0</code>, is of the multivariate normal data, <code>d</code>. The second model, <code>fit1</code>, is on the otherwise identical data with the two odd and influential values, <code>o</code>.</p>
 <pre class="r"><code>fit0 &lt;- lm(data = d, y ~ 1 + x)
-fit1 &lt;- lm(data = o, y ~ 1 + x)
-
-library(broom)
+fit1 &lt;- lm(data = o, y ~ 1 + x)</code></pre>
+<p>We’ll use the <a href="https://cran.r-project.org/web/packages/broom/index.html">broom package</a> to assist with model summaries and other things.</p>
+<pre class="r"><code>library(broom)
 
 tidy(fit0) %&gt;% mutate_if(is.double, round, digits = 2)</code></pre>
 <pre><code>##          term estimate std.error statistic p.value
@@ -773,6 +773,7 @@ tidy(b0) %&gt;%
 <li>RStudio 1.1.442</li>
 <li>rmarkdown 1.8</li>
 <li>tidyverse 1.2.1</li>
+<li>viridis 0.4.0</li>
 <li>MASS 7.3-47</li>
 <li>broom 0.4.3</li>
 <li>brms 2.1.9</li>
