@@ -1,20 +1,8 @@
 ---
-title: "Robust Linear Regression with Student's T Distribution"
-author: "A Solomon Kurz"
-date: "`r format(Sys.Date())`"
 output:
-  html_document:
-    code_folding: show
-    keep_md: TRUE
+  md_document:
+    variant: markdown_github
 ---
-
-```{r, echo = F}
-# Fitting all these Bayesian models takes a few minutes. It's easier to just save them in an rda file and load them at the beginning of the document.
-
-# save(list = c("b0", "b1", "b1.1", "b1.2", "b2", "b3", "b4", "b2_data_d", "b3_data_d", "b4_data_d"),  file = "student_t_fits.rda")
-
-load(file = "student_t_fits.rda")
-```
 
 The purpose of this document is to demonstrate the advantages of the Student's t distribution for regression with outliers, particularly within a [Bayesian framework](https://www.youtube.com/channel/UCNJK6_DZvcMqNSzQdEkzvzA/playlists).
 
@@ -183,7 +171,7 @@ aug1 <- augment(fit1)
 glimpse(aug1)
 ```
 
-Here we can compare the observations with Cook's distance, *D~i~*,  (i.e., `.cooksd`). *D~i~* is a measure of the influence of a given observation on the model. To compute *D~i~*, the model is fit once for each $n$ case, with that case dropped. Then the difference in the model with all observations and the model with all observations but the *i*th observation, as defined by the Euclidian distance between the estimators. [Fahrmeir et al (2013, p. 166)](http://www.springer.com/us/book/9783642343322#aboutBook) suggest that within the OLS framework "as a rule of thumb, observations with *D~i~* > 0.5 are worthy of attention, and observations with *D~i~* > 1 should always be examined." Here we plot *D~i~* against our observation index, *i*, for both models.
+Here we can compare the observations with Cook's distance, *D~i~*,  (i.e., `.cooksd`). *D~i~* is a measure of the influence of a given observation on the model. To compute *D~i~*, the model is fit once for each *n* case, with that case dropped. Then the difference in the model with all observations and the model with all observations but the *i*th observation, as defined by the Euclidian distance between the estimators. [Fahrmeir et al (2013, p. 166)](http://www.springer.com/us/book/9783642343322#aboutBook) suggest that within the OLS framework "as a rule of thumb, observations with *D~i~* > 0.5 are worthy of attention, and observations with *D~i~* > 1 should always be examined." Here we plot *D~i~* against our observation index, *i*, for both models.
 
 ```{r, fig.width = 8, fig.height = 3}
 aug0 %>%  # The well-behaived data
@@ -217,7 +205,7 @@ library(brms)
 
 For our first two Bayesian models, `b0` and `b1`, we'll use the conventional Gaussian likelihood (i.e., `family = gaussian` in the `brm()` function). Like with `fit01`, above, the first model is based on the nice `d` data. The second, `b1`, is based on the more-difficult `o` data.
 
-```{r, eval = F}
+```{r, results = 'hide'}
 b0 <- 
   brm(data = d, family = gaussian,
       y ~ 1 + x,
@@ -309,7 +297,7 @@ So with `b0`--the model based on the well-behaved multivariate normal data, `d`-
 
 A typical way to handle outlying values is to delete them based on some criterion, such as the Mahalanobis distance, Cook's *D~i~*, or our new friend, the `pareto_k`. In our next two models, we'll do that. In our `data` arguments, we can use the `slice()` function to omit cases. In model `b1.1`, we simply omit the first and most influential case. In model `b1.2`, we omitted both unduly-influential cases, the values from rows 1 and 2.
 
-```{r, eval = F}
+```{r, results = 'hide'}
 b1.1 <- 
   brm(data = o %>% slice(2:100), 
       family = gaussian,
@@ -340,7 +328,7 @@ They are closer to the true data generating model (i.e., the code we used to mak
 
 Recall that the normal distribution is equivalent to a Student's t with the degrees of freedom parameter, *nu*, set to infinity. *nu* is fixed. Here we'll relax that assumption and estimate *nu* from the data. Since *nu*'s now a parameter, we'll have to give it a prior. For our first Student's t model, we'll estimate *nu* with the brms default gamma(2, 0.1) prior.
 
-```{r, eval = F}
+```{r, results = 'hide'}
 b2 <- 
   brm(data = o, family = student,
       y ~ 1 + x,
@@ -368,7 +356,7 @@ ggplot(data = tibble(x = seq(from = 0, to = 60, by = .1)),
 
 So the default prior is centered around values in the 2 to 30 range, but has a long gentle-sloping tail, allowing the model to yield much larger values for *nu*, as needed. The prior we use below is almost entirely concentrated in the single-digit range. In this case, that will preference Student's t likelihoods with very small *nu* parameters and correspondingly thick tails--easily allowing for extreme values.
 
-```{r, eval = F}
+```{r, results = 'hide'}
 b3 <- 
   brm(data = o, family = student,
       y ~ 1 + x,
@@ -380,7 +368,7 @@ b3 <-
 
 For our final model, we'll fix the *nu* parameter in a `bf()` statement.
 
-```{r, eval = F}
+```{r, results = 'hide'}
 b4 <-
   brm(data = o, family = student,
       bf(y ~ 1 + x, nu = 4),
@@ -553,7 +541,7 @@ A while back (before I fell in love with Bayes), I submitted a paper in which we
 
 So, what would happen if we used the Student’s t likelihood with our well-behaved `d` data? Will the results look like those from `b0`, the Gaussian model of the `d` data? To answer the question, we’ll first re-fit the Student-t models `b2` through `b4`, this time switching out the nasty outlier `o` data for the nicely-Gaussian `d` data. 
 
-```{r, eval = F}
+```{r, results = 'hide'}
 b2_data_d <- 
   brm(data = d, family = student,
       y ~ 1 + x,
@@ -620,7 +608,7 @@ tidy(b0) %>%
   facet_grid(~term, scales = "free_x")
 ```
 
-Happily, the intercepts and slopes were near equivalent across the four models. If those were your parameters of interest, it seems like switching to a robust Student's t likelihood didn't hurt anything for our well-behaved `d` data. Note, though, that *sigma* changed a bit across models. This is because *sigma* means something different when you switch from the Gaussian to a lower-*nu* Student's t. When you use the Gaussian, *sigma* is the standard deviation and *sigma^2^* is the variance. However, once you use a sub-infinite *nu*, *sigma* is now referred to as the scale parameter and no longer corresponds to the standard deviation. When *nu* is quite large, the difference shouldn't be as large. But as your *nu*s approach 1, the discrepancy between the scale and the standard deviation grows.
+Happily, the intercepts and slopes were near equivalent across the four models. If those were your parameters of interest, it seems like switching to a robust Student's t likelihood didn't hurt anything for our well-behaved `d` data. Note, though, that *sigma* changed a bit across models. This is because *sigma* means something different when you switch from the Gaussian to a lower-*nu* Student's t. When you use the Gaussian, *sigma* is the standard deviation and *sigma^2* is the variance. However, once you use a sub-infinite *nu*, *sigma* is now referred to as the scale parameter and no longer corresponds to the standard deviation. When *nu* is quite large, the difference shouldn't be as large. But as your *nu*s approach 1, the discrepancy between the scale and the standard deviation grows.
 
 Let's compare our models with the LOO.
 
@@ -638,7 +626,7 @@ Note. The analyses in this document were done with:
 
 * R         3.4.4
 * RStudio   1.1.442
-* rmarkdown 1.8
+* rmarkdown 1.9
 * tidyverse 1.2.1
 * viridis   0.4.0
 * MASS      7.3-47
@@ -646,221 +634,3 @@ Note. The analyses in this document were done with:
 * brms      2.1.9
 * rstan     2.17.3
 * loo       1.1.0
-
-```{r, echo = F, eval = F}
-rm(nu, s, m, d, o, fit0, fit1, aug0, aug1, b0, b1, b1.1, b1.2, b2, b3, b4, loo_b0, loo_b1, loo_b2, loo_b3, loo_b4, b_estimates, b2_data_d, b3_data_d, b4_data_d, nd, fitted_bs)
-
-# Below this point lives the code for a bunch of plots I tooled around with but ultimately decided to leave out of the main document. They added something, but ended up seeming more trouble than they were worth to tell the basic story.
-```
-
-
-
-
-
-
-
-
-```{r, fig.width = 8, fig.height = 3, eval = F, echo = F}
-psislw_fits <-
-  psislw(log_lik(b0),
-       wcp = 0.2)$lw_smooth %>%
-  as_tibble() %>%
-  gather() %>%
-  bind_rows(
-    psislw(log_lik(b1),
-       wcp = 0.2)$lw_smooth %>%
-      as_tibble() %>%
-      gather()
-  ) %>%
-  mutate(key = str_extract(key, "\\d+") %>% as.double(),
-         value = -1*value) %>%
-  rename(i = key,
-         importance_weight = value) %>%
-  mutate(fit = rep(c("fit b0", "fit b1"), each = n()/2))
-  
-ggplot(data = psislw_fits, 
-       aes(x = i, y = importance_weight)) +
-  # The interquartile range with the median as the point
-  stat_summary(geom = "pointrange",
-               fun.y = median,
-               fun.ymin = function(x){quantile(x, .25)},
-               fun.ymax = function(x){quantile(x, .75)},
-               shape = 20, size = 1/4, alpha = 1/2) +
-  theme(panel.grid = element_blank(),
-        axis.title.x = element_text(face = "italic", family = "Times")) +
-  facet_wrap(~fit)
-```
-
-
-```{r, fig.width = 3.5, fig.height = 3, eval = F, echo = F}
-# pointwise
-
-loo_b1$pointwise %>% 
-  as_tibble() 
-```
-
-
-```{r, fig.width = 8, fig.height = 3, eval = F, echo = F}
-# The `elpd_loo` from the `loo()` output is the "Bayesian LOO estimate of out-of-sample predictive fit".
-# The `p_loo` is the "leave-one-out predictive density given the data without the *i*th data point"
-
-##elpd_loo
-
-loo_b0$pointwise %>%  # The well-behaived data
-  as_tibble() %>%
-  mutate(i = 1:n()) %>%
-  bind_rows(  # The data with two outliers
-    loo_b1$pointwise %>% 
-      as_tibble() %>%
-      mutate(i = 1:n())
-  ) %>%
-  mutate(fit = rep(c("fit b0", "fit b1"), each = n()/2)) %>%
-  
-  ggplot(aes(x = i, y = elpd_loo)) +
-  geom_point(alpha = .5) +
-  theme(panel.grid = element_blank(),
-        axis.title.x = element_text(face = "italic", family = "Times")) +
-    facet_wrap(~fit)
-```
-
-
-
-```{r, fig.width = 8, fig.height = 3, eval = F, echo = F}
-##p_loo
-
-loo_b0$pointwise %>%  # The well-behaived data
-  as_tibble() %>%
-  mutate(i = 1:n()) %>%
-  bind_rows(  # The data with two outliers
-    loo_b1$pointwise %>% 
-      as_tibble() %>%
-      mutate(i = 1:n())
-    ) %>%
-  mutate(fit = rep(c("fit b0", "fit b1"), each = n()/2)) %>%
-  
-  ggplot(aes(x = i, y = p_loo)) +
-  geom_point(alpha = .5) +
-  theme(panel.grid = element_blank(),
-        axis.title.x = element_text(face = "italic", family = "Times")) +
-  facet_wrap(~fit)
-```
-
-
-```{r, fig.width = 8, fig.height = 3, eval = F, echo = F}
-## elpd_loo
-
-# Model b1, the Gaussian with the outliers
-loo_b1$pointwise %>%
-  as_tibble() %>%
-  mutate(i = 1:n()) %>%
-  #Model b2, Student's t with default priors on nu
-  bind_rows(
-    loo_b2$pointwise %>% 
-      as_tibble() %>%
-      mutate(i = 1:n())
-  ) %>%
-  #Model b3, Student's t with stronger priors on nu
-  bind_rows(
-    loo_b3$pointwise %>% 
-      as_tibble() %>%
-      mutate(i = 1:n())
-  ) %>%
-  #Model b4, Student's t with nu = 4
-  bind_rows(
-    loo_b4$pointwise %>% 
-      as_tibble() %>%
-      mutate(i = 1:n())
-  ) %>%
-  mutate(fit = rep(c("fit b1", "fit b2", "fit b3", "fit b4"), each = n()/4)) %>%
-  
-  ggplot(aes(x = i, y = elpd_loo)) +
-  geom_point(alpha = .5) +
-  theme(panel.grid = element_blank(),
-        axis.title.x = element_text(face = "italic", family = "Times")) +
-    facet_wrap(~fit)
-```
-
-
-```{r, fig.width = 8, fig.height = 3, eval = F, echo = F}
-##p_loo
-
-# Model b1, the Gaussian with the outliers
-loo_b1$pointwise %>%
-  as_tibble() %>%
-  mutate(i = 1:n()) %>%
-  #Model b2, Student's t with default priors on nu
-  bind_rows(
-    loo_b2$pointwise %>% 
-      as_tibble() %>%
-      mutate(i = 1:n())
-  ) %>%
-  #Model b3, Student's t with stronger priors on nu
-  bind_rows(
-    loo_b3$pointwise %>% 
-      as_tibble() %>%
-      mutate(i = 1:n())
-  ) %>%
-  #Model b4, Student's t with nu = 4
-  bind_rows(
-    loo_b4$pointwise %>% 
-      as_tibble() %>%
-      mutate(i = 1:n())
-  ) %>%
-  mutate(fit = rep(c("fit b1", "fit b2", "fit b3", "fit b4"), each = n()/4)) %>%
-  
-  ggplot(aes(x = i, y = p_loo)) +
-  geom_point(alpha = .5) +
-  theme(panel.grid = element_blank(),
-        axis.title.x = element_text(face = "italic", family = "Times")) +
-  facet_wrap(~fit)
-```
-
-```{r, fig.width = 8, fig.height = 2.5, eval = F, echo = F}
-# Let's take a look at *nu*.
-
-posterior_samples(b2) %>% 
-  bind_rows(posterior_samples(b2_data_d)) %>% 
-  mutate(model = rep(c("b2", "b2_data_d"), each = 4000)) %>% 
-  
-  ggplot(aes(x = nu)) +
-  geom_density(size = 0,
-               fill = viridis_pal(direction = 1, option = "D")(5)[4]) +
-  geom_line(data = tibble(nu = seq(from = 0, to = 120, by = .5)),
-            aes(x = nu,
-                y = dgamma(nu, 2, 0.1)),
-            color = viridis_pal(direction = 1, option = "D")(5)[1],
-            linetype = 3) +
-  scale_y_continuous(NULL, breaks = NULL) +
-  labs(subtitle = "The filled densities are the posterior distributions. The dotted lines are the priors.",
-       x = expression(nu)) +
-  theme(panel.grid = element_blank()) +
-  facet_grid(~model)
-```
-
-```{r, fig.width = 8, fig.height = 2.5, eval = F, echo = F}
-posterior_samples(b3) %>% 
-  bind_rows(posterior_samples(b3_data_d)) %>% 
-  mutate(model = rep(c("b3", "b3_data_d"), each = 4000)) %>% 
-  
-  ggplot(aes(x = nu)) +
-  geom_density(size = 0,
-               fill = viridis_pal(direction = 1, option = "D")(5)[4]) +
-  geom_line(data = tibble(nu = seq(from = 0, to = 40, by = .1)),
-            aes(x = nu,
-                y = dgamma(nu, 4, 1)),
-            color = viridis_pal(direction = 1, option = "D")(5)[1],
-            linetype = 3) +
-  scale_y_continuous(NULL, breaks = NULL) +
-  labs(subtitle = "The filled densities are the posterior distributions. The dotted lines are the priors.",
-       x = expression(nu)) +
-  theme(panel.grid = element_blank()) +
-  facet_grid(~model)
-```
-
-
-
-
-
-
-
-
