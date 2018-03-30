@@ -284,13 +284,7 @@ b0 <-
       prior = c(set_prior("normal(0, 100)", class = "Intercept"),
                 set_prior("normal(0, 10)", class = "b"),
                 set_prior("cauchy(0, 1)", class = "sigma")))
-```
 
-    ## Compiling the C++ model
-
-    ## Start sampling
-
-``` r
 b1 <- 
   brm(data = o, family = gaussian,
       y ~ 1 + x,
@@ -298,9 +292,6 @@ b1 <-
                 set_prior("normal(0, 10)", class = "b"),
                 set_prior("cauchy(0, 1)", class = "sigma")))
 ```
-
-    ## Compiling the C++ model
-    ## Start sampling
 
 Here are the model summaries.
 
@@ -462,13 +453,7 @@ b1.1 <-
       prior = c(set_prior("normal(0, 100)", class = "Intercept"),
                 set_prior("normal(0, 10)", class = "b"),
                 set_prior("cauchy(0, 1)", class = "sigma")))
-```
 
-    ## Compiling the C++ model
-
-    ## Start sampling
-
-``` r
 b1.2 <- 
   brm(data = o %>% slice(3:100), 
       family = gaussian,
@@ -477,9 +462,6 @@ b1.2 <-
                 set_prior("normal(0, 10)", class = "b"),
                 set_prior("cauchy(0, 1)", class = "sigma")))
 ```
-
-    ## Compiling the C++ model
-    ## Start sampling
 
 Here are the summaries for our models based on the `slice[d]` data.
 
@@ -522,10 +504,6 @@ b2 <-
                 set_prior("cauchy(0, 1)", class = "sigma")))
 ```
 
-    ## Compiling the C++ model
-
-    ## Start sampling
-
 For the next model, we'll switch out that weak gamma(2, 0.1) for a stronger gamma(4, 1). Before fitting the model, it might be useful to take a peek at what that prior looks like. In the plot, below, the orange density in the background is the default gamma(2, 0.1) and the purple density in the foreground is the stronger gamma(4, 1).
 
 ``` r
@@ -556,10 +534,6 @@ b3 <-
                 set_prior("cauchy(0, 1)", class = "sigma")))
 ```
 
-    ## Compiling the C++ model
-
-    ## Start sampling
-
 For our final model, we'll fix the *nu* parameter in a `bf()` statement.
 
 ``` r
@@ -570,10 +544,6 @@ b4 <-
                 set_prior("normal(0, 10)", class = "b"),
                 set_prior("cauchy(0, 1)", class = "sigma")))
 ```
-
-    ## Compiling the C++ model
-
-    ## Start sampling
 
 Now we've got all those models, we can put all their estimates into one tibble.
 

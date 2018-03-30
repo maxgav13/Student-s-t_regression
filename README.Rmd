@@ -205,7 +205,7 @@ library(brms)
 
 For our first two Bayesian models, `b0` and `b1`, we'll use the conventional Gaussian likelihood (i.e., `family = gaussian` in the `brm()` function). Like with `fit01`, above, the first model is based on the nice `d` data. The second, `b1`, is based on the more-difficult `o` data.
 
-```{r, results = 'hide'}
+```{r, message = F, results = 'hide'}
 b0 <- 
   brm(data = d, family = gaussian,
       y ~ 1 + x,
@@ -297,7 +297,7 @@ So with `b0`--the model based on the well-behaved multivariate normal data, `d`-
 
 A typical way to handle outlying values is to delete them based on some criterion, such as the Mahalanobis distance, Cook's *D~i~*, or our new friend, the `pareto_k`. In our next two models, we'll do that. In our `data` arguments, we can use the `slice()` function to omit cases. In model `b1.1`, we simply omit the first and most influential case. In model `b1.2`, we omitted both unduly-influential cases, the values from rows 1 and 2.
 
-```{r, results = 'hide'}
+```{r, message = F, results = 'hide'}
 b1.1 <- 
   brm(data = o %>% slice(2:100), 
       family = gaussian,
@@ -328,7 +328,7 @@ They are closer to the true data generating model (i.e., the code we used to mak
 
 Recall that the normal distribution is equivalent to a Student's t with the degrees of freedom parameter, *nu*, set to infinity. *nu* is fixed. Here we'll relax that assumption and estimate *nu* from the data. Since *nu*'s now a parameter, we'll have to give it a prior. For our first Student's t model, we'll estimate *nu* with the brms default gamma(2, 0.1) prior.
 
-```{r, results = 'hide'}
+```{r, message = F, results = 'hide'}
 b2 <- 
   brm(data = o, family = student,
       y ~ 1 + x,
@@ -356,7 +356,7 @@ ggplot(data = tibble(x = seq(from = 0, to = 60, by = .1)),
 
 So the default prior is centered around values in the 2 to 30 range, but has a long gentle-sloping tail, allowing the model to yield much larger values for *nu*, as needed. The prior we use below is almost entirely concentrated in the single-digit range. In this case, that will preference Student's t likelihoods with very small *nu* parameters and correspondingly thick tails--easily allowing for extreme values.
 
-```{r, results = 'hide'}
+```{r, message = F, results = 'hide'}
 b3 <- 
   brm(data = o, family = student,
       y ~ 1 + x,
@@ -368,7 +368,7 @@ b3 <-
 
 For our final model, we'll fix the *nu* parameter in a `bf()` statement.
 
-```{r, results = 'hide'}
+```{r, message = F, results = 'hide'}
 b4 <-
   brm(data = o, family = student,
       bf(y ~ 1 + x, nu = 4),
