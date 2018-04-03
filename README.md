@@ -1,10 +1,18 @@
+Robust Linear Regression with Student’s T Distribution
+======================================================
+
 The purpose of this document is to demonstrate the advantages of the Student's t distribution for regression with outliers, particularly within a [Bayesian framework](https://www.youtube.com/channel/UCNJK6_DZvcMqNSzQdEkzvzA/playlists).
 
-In this document, I’m presuming you are familiar with linear regression, familiar with the basic differences between frequentist and Bayesian approaches to fitting regression models, and have a sense that the issue of outlier values is a pickle worth contending with. All code in is [R](https://www.r-bloggers.com/why-use-r-five-reasons/), with a heavy use of the [tidyverse](http://style.tidyverse.org) and the [brms](https://cran.r-project.org/web/packages/brms/index.html) package.
+In this document, I’m presuming you are familiar with linear regression, familiar with the basic differences between frequentist and Bayesian approaches to fitting regression models, and have a sense that the issue of outlier values is a pickle worth contending with. All code in is [R](https://www.r-bloggers.com/why-use-r-five-reasons/), with a heavy use of the [tidyverse](http://style.tidyverse.org)--which you might learn a lot about [here, especially chapter 5](http://r4ds.had.co.nzhttp://r4ds.had.co.nz)--, and the [brms](https://cran.r-project.org/web/packages/brms/index.html) package.
 
-**Here's the deal**: The Gaussian likelihood, which is typical for regression models, is sensitive to outliers. The normal distribution is a special case of Student's t distribution with *nu* (the degree of freedom parameter) set to infinity. However, when *nu* is small, Student's t distribution is more robust to multivariate outliers. For more on the topic, see [Gelman & Hill (2007, chapter 6)](http://www.stat.columbia.edu/~gelman/arm/) or [Kruschke (2014, chapter 16)](https://sites.google.com/site/doingbayesiandataanalysis/).
+The problem.
+------------
 
-In this document, we demonstrate how vunlerable the Gaussian likelihood is to outliers and then compare it too different ways of using Student's t likelihood for the same data.
+Regression models typically use the Gaussian likelihood. The Gaussian likelihood is a sensible default choice for many data types. Unfortunately, the normal (i.e., Gaussian) distribution is sensitive to outliers.
+
+The normal distribution is a special case of Student's t distribution with the *nu* parameter (i.e., the degree of freedom) set to infinity. However, when *nu* is small, Student's t distribution is more robust to multivariate outliers. See [Gelman & Hill (2007, chapter 6)](http://www.stat.columbia.edu/~gelman/arm/) or [Kruschke (2014, chapter 16)](https://sites.google.com/site/doingbayesiandataanalysis/) for textbook treatments on the topic.
+
+In this project, we demonstrate how vulnerable the Gaussian likelihood is to outliers and then compare it too different ways of using Student's t likelihood for the same data.
 
 First, we'll get a sense of the distributions with a plot.
 
@@ -33,7 +41,9 @@ ggplot(data = tibble(x = seq(from = -6, to = 6, by = .01)), aes(x = x)) +
 
 \[Asside: In this document, we make use of the handy [viridis package](https://cran.r-project.org/web/packages/viridis/vignettes/intro-to-viridis.html) for our color paletes.\]
 
-So the difference is that a Student's t with a low *nu* will have notably heavier tails than the conventional Gaussian distribution. This difference is most notable as *nu* approaches 1. However, the difference can be subtle when looking at a plot. Another way is to compare how probable relatively extreme values are in a Student's t distribution relative to the Gaussian. For the sake of demonstration, here we'll compare Gauss with Student's t with a *nu* of 5. In the plot above, they are clearly different, but not shockingly so. However, that difference is very notable in the tails.
+So the difference is that a Student's t with a low *nu* will have notably heavier tails than the conventional Gaussian distribution. It’s easiest to see the difference when *nu* approaches 1. Even then, the difference can be subtle when looking at a plot. Another way is to compare how probable relatively extreme values are in a Student's t distribution relative to the Gaussian. For the sake of demonstration, here we'll compare Gauss with Student's t with a *nu* of 5. In the plot above, they are clearly different, but not shockingly so. However, that difference is very notable in the tails.
+
+Let’s look closer with our table.
 
 In the table, below, we compare the probability of a given Z score or lower within the Gaussian and a *nu* = 5 Student's t. In the rightmost column, we compare the probabilities in a ratio.
 
@@ -58,12 +68,12 @@ tibble(Z_score = 0:-5,
     ## 5      -4 0.0000300     0.00516                163   
     ## 6      -5 0             0.00205               7160
 
-Note how extreme scores are more probable in this Student’s t than in the Gaussian. A consequence of this is that extreme scores are less influential to your solutions when you use a small-*nu* Student’s t distribution in place of the Gaussian. That is, the small-*nu* Student’s t is more robust than the Gaussian to unusual and otherwise influential observations.
+Note how low Z scores are more probable in this Student’s t than in the Gaussian. This is most apparent in the `Student/Gauss ratio` column on the right. A consequence of this is that extreme scores are less influential to your solutions when you use a small-*nu* Student’s t distribution in place of the Gaussian. That is, the small-*nu* Student’s t is more robust than the Gaussian to unusual and otherwise influential observations.
 
 In order to demonstrate, let's simulate our own. We'll start by creating multivariate normal data.
 
 Let's create our initial tibble of well-behaved data, `d`
-=========================================================
+---------------------------------------------------------
 
 First, we'll need to define our variance/covariance matrix.
 
@@ -74,13 +84,15 @@ s <- matrix(c(1, .6,
              nrow = 2, ncol = 2)
 ```
 
-By the two .6s on the off-diagonal positions, we indicate we'd like our two variables to have a correlation of .6.
+By the two `.6`s on the off-diagonal positions, we indicate we'd like our two variables to have a correlation of .6.
 
 Second, our variables also need means, which we'll define with a mean vector.
 
 ``` r
 m <- c(0, 0)
 ```
+
+With means of `0` and variances of `1`, our data are in a standardized metric.
 
 Third, we'll use the `mvrnorm()` function from the [MASS package](https://cran.r-project.org/web/packages/MASS/index.html) to simulate our data.
 
@@ -93,7 +105,11 @@ d <-
   d %>%
   as_tibble() %>%
   rename(y = V1, x = V2)
+```
 
+The first few rows look like so:
+
+``` r
 head(d)
 ```
 
@@ -109,7 +125,7 @@ head(d)
 
 Side note. For more information on simulating data, check out [this nice r-bloggers post](https://www.r-bloggers.com/creating-sample-datasets-exercises/).
 
-This line reorders our tibble by `x`.
+This line reorders our data by `x`, placing the smallest values on top.
 
 ``` r
 d <-
@@ -130,7 +146,7 @@ head(d)
     ## 6 -0.157 -1.37
 
 Let's create our outlier tibble, `o`
-====================================
+------------------------------------
 
 Here we'll make two outlying and unduly influential values.
 
@@ -152,12 +168,12 @@ head(o)
     ## 5 -0.785 -1.40
     ## 6 -0.157 -1.37
 
-With the code, above, we replaced the first two values of our first variable, which were both quite negative, with two large positive values.
+With the code, above, we replaced the first two values of our first variable, `y`. They both started out quite negative. Now they are positive values of a large magnitude in the standardized metric.
 
 Frequentist OLS Models
-======================
+----------------------
 
-To get a quick sense of what we've done, we'll first fit two models with OLS regression. The first model, `fit0`, is of the multivariate normal data, `d`. The second model, `fit1`, is on the otherwise identical data with the two odd and influential values, `o`.
+To get a quick sense of what we've done, we'll first fit two models with OLS regression. The first model, `fit0`, is of the multivariate normal data, `d`. The second model, `fit1`, is on the otherwise identical data with the two odd and influential values, `o`. Here is our model code.
 
 ``` r
 fit0 <- lm(data = d, y ~ 1 + x)
@@ -165,6 +181,8 @@ fit1 <- lm(data = o, y ~ 1 + x)
 ```
 
 We'll use the [broom package](https://cran.r-project.org/web/packages/broom/index.html) to assist with model summaries and other things.
+
+Here are the parameter estimates for the first model.
 
 ``` r
 library(broom)
@@ -176,6 +194,8 @@ tidy(fit0) %>% mutate_if(is.double, round, digits = 2)
     ## 1 (Intercept)    -0.01      0.09     -0.08    0.94
     ## 2           x     0.45      0.10      4.55    0.00
 
+And now the parameters for the second model, the one based on the `o` outlier data.
+
 ``` r
 tidy(fit1) %>% mutate_if(is.double, round, digits = 2)
 ```
@@ -184,7 +204,7 @@ tidy(fit1) %>% mutate_if(is.double, round, digits = 2)
     ## 1 (Intercept)     0.12      0.11      1.12    0.26
     ## 2           x     0.15      0.13      1.21    0.23
 
-Just two odd and influential values dramatically changed the model parameters, particularly the slope. Let's plot the data to get a sense of what's going on.
+Just two odd and influential values dramatically changed the model parameters, particularly the slope. Let's plot the data to get a visual sense of what happened.
 
 ``` r
 # The well-behaived data
@@ -198,7 +218,7 @@ ggplot(data = d, aes(x = x, y = y)) +
   theme(panel.grid = element_blank())
 ```
 
-![](README_files/figure-markdown_github/unnamed-chunk-10-1.png)
+![](README_files/figure-markdown_github/unnamed-chunk-12-1.png)
 
 ``` r
 # The data with two outliers
@@ -214,7 +234,7 @@ ggplot(data = o, aes(x = x, y = y, color = y > 3)) +
         legend.position = "none")
 ```
 
-![](README_files/figure-markdown_github/unnamed-chunk-10-2.png)
+![](README_files/figure-markdown_github/unnamed-chunk-12-2.png)
 
 The two outliers were quite influential on the slope. It went from a nice clear diagonal to almost horizontal. You'll also note how the 95% intervals (i.e., the bowtie shape) were a bit wider when based on the `o` data.
 
@@ -239,7 +259,7 @@ glimpse(aug1)
     ## $ .cooksd    <dbl> 6.809587e-01, 3.820802e-01, 4.783890e-05, 6.480561e...
     ## $ .std.resid <dbl> 4.82755612, 3.85879897, -0.04552439, -0.17992001, -...
 
-Here we can compare the observations with Cook's distance, *D<sub>i</sub>*, (i.e., `.cooksd`). *D<sub>i</sub>* is a measure of the influence of a given observation on the model. To compute *D<sub>i</sub>*, the model is fit once for each *n* case, with that case dropped. Then the difference in the model with all observations and the model with all observations but the *i*th observation, as defined by the Euclidian distance between the estimators. [Fahrmeir et al (2013, p. 166)](http://www.springer.com/us/book/9783642343322#aboutBook) suggest that within the OLS framework "as a rule of thumb, observations with *D<sub>i</sub>* &gt; 0.5 are worthy of attention, and observations with *D<sub>i</sub>* &gt; 1 should always be examined." Here we plot *D<sub>i</sub>* against our observation index, *i*, for both models.
+Here we can compare the observations with Cook's distance, *D<sub>i</sub>* (i.e., `.cooksd`). Cook's *D<sub>i</sub>* is a measure of the influence of a given observation on the model. To compute *D<sub>i</sub>*, the model is fit once for each *n* case, after first dropping that case. Then the difference in the model with all observations and the model with all observations but the *i*th observation, as defined by the Euclidian distance between the estimators. [Fahrmeir et al (2013, p. 166)](http://www.springer.com/us/book/9783642343322#aboutBook) suggest that within the OLS framework "as a rule of thumb, observations with *D<sub>i</sub>* &gt; 0.5 are worthy of attention, and observations with *D<sub>i</sub>* &gt; 1 should always be examined." Here we plot *D<sub>i</sub>* against our observation index, *i*, for both models.
 
 ``` r
 aug0 %>%  # The well-behaived data
@@ -253,27 +273,31 @@ aug0 %>%  # The well-behaived data
   ggplot(aes(x = i, y = .cooksd)) +
   geom_hline(yintercept = .5, color = "white") +
   geom_point(alpha = .5) +
+  geom_text(data = tibble(i = 46, 
+                          .cooksd = .53,
+                          fit = "fit b0"),
+            label = "Fahrmeir et al said we might worry around here",
+            color = "grey50") +
   coord_cartesian(ylim = c(0, .7)) +
   theme(panel.grid = element_blank(),
         axis.title.x = element_text(face = "italic", family = "Times")) +
     facet_wrap(~fit)
 ```
 
-![](README_files/figure-markdown_github/unnamed-chunk-12-1.png)
+![](README_files/figure-markdown_github/unnamed-chunk-14-1.png)
 
 For the model of the well-behaved data, `fit0`, we have *D<sub>i</sub>* values all hovering near zero. However, the plot for `fit1` shows one *D<sub>i</sub>* value well above the 0.5 level and another not quite that high but deviant relative to the rest. Our two outlier values look quite influential for the results of `fit1`.
 
-Switching to a Bayesian Framework
-=================================
+Switching to a Bayesian framework
+---------------------------------
 
-In this document, we'll use the [brms package](https://cran.r-project.org/web/packages/brms/index.html) to fit our Bayesian regression models. Throughout, we'll use [weakly-regularizing priors](https://github.com/stan-dev/stan/wiki/Prior-Choice-Recommendations).
+In this document, we'll use the [brms package](https://cran.r-project.org/web/packages/brms/index.html) to fit our Bayesian regression models. You can learn a lot about brms [here](https://cran.r-project.org/web/packages/brms/vignettes/brms_overview.pdf) and [here](https://github.com/paul-buerkner/brms). To keep things simple, we'll use [weakly-regularizing priors](https://github.com/stan-dev/stan/wiki/Prior-Choice-Recommendations).
 
 ``` r
 library(brms)
 ```
 
-Sticking with Gauss
--------------------
+### Sticking with Gauss.
 
 For our first two Bayesian models, `b0` and `b1`, we'll use the conventional Gaussian likelihood (i.e., `family = gaussian` in the `brm()` function). Like with `fit01`, above, the first model is based on the nice `d` data. The second, `b1`, is based on the more-difficult `o` data.
 
@@ -319,9 +343,9 @@ tidy(b1) %>% slice(1:3) %>% mutate_if(is.double, round, digits = 2)
 
 These should look familiar. They're very much like the results from the OLS models. Hopefully this isn't surprising. Our priors were quite weak, so there's no reason to suspect the results would differ much.
 
-### The LOO and other goodies help with diagnostics.
+#### The LOO and other goodies help with diagnostics.
 
-With the `loo()` function, we'll extract loo objects, which contain some handy output. We'll use `str()` to get a sense of what's all in there.
+With the `loo()` function, we'll extract loo objects, which contain some handy output.
 
 ``` r
 loo_b0 <- loo(b0)
@@ -333,6 +357,8 @@ loo_b1 <- loo(b1)
     ## the assumption that these observations are negligible. This will refit
     ## the model 1 times to compute the ELPDs for the problematic observations
     ## directly.
+
+We'll use `str()` to get a sense of what's all in there, using `loo_b1` as an example.
 
 ``` r
 str(loo_b1)
@@ -354,34 +380,28 @@ str(loo_b1)
     ##  - attr(*, "log_lik_dim")= int [1:2] 4000 100
     ##  - attr(*, "class")= chr [1:2] "ic" "loo"
 
-For a detailed explanation of all those elements, see the [reference manual](https://cran.r-project.org/web/packages/loo/loo.pdf). For our purposes, we'll focus on `pareto_k`. Here's what it looks like for the `b1` model.
+For a detailed explanation of all those elements, see the [reference manual](https://cran.r-project.org/web/packages/loo/loo.pdf). For our purposes, we'll focus on `pareto_k`. Here's a glimpse of what it contains for the `b1` model.
 
 ``` r
-loo_b1$pareto_k
+loo_b1$pareto_k %>% as_tibble()
 ```
 
-    ##   [1]  0.9944829854  0.6220688251 -0.0142787825 -0.0004414504  0.0025748863
-    ##   [6] -0.0362324125 -0.1092558653 -0.0494050935  0.0945824167 -0.0172846292
-    ##  [11]  0.0019559806 -0.0491486519 -0.0724288462 -0.0092298294 -0.0601263795
-    ##  [16]  0.0110444224 -0.0479315912 -0.0697861465 -0.0540168019 -0.0912739409
-    ##  [21]  0.0616177365  0.0066884055 -0.0659385449 -0.1590983027 -0.0392326585
-    ##  [26] -0.1468850497 -0.0467161509 -0.1413664326 -0.0240259007 -0.0147998717
-    ##  [31] -0.0280750919 -0.0664797182 -0.1059757587 -0.0372058538 -0.0278251635
-    ##  [36] -0.0341504253 -0.0894378249 -0.1100361615 -0.0628570199 -0.1443427101
-    ##  [41] -0.0902022799 -0.0829628721 -0.0590367723 -0.0515670502 -0.1150610738
-    ##  [46] -0.0965332976 -0.0943285959 -0.0555092219 -0.0732086305 -0.0962907718
-    ##  [51] -0.0725700931 -0.0509452075 -0.0659390811 -0.0008464589 -0.0398504773
-    ##  [56] -0.0606627507 -0.0600523663 -0.0533240823 -0.1321345202 -0.1039725419
-    ##  [61] -0.0244142251 -0.0351216871 -0.0770709466 -0.0510152143 -0.0391089503
-    ##  [66] -0.0941225991  0.0266582335  0.0465720966 -0.0487954721 -0.0654435109
-    ##  [71] -0.1084755013 -0.0592709706 -0.0915116790 -0.0906236988 -0.0932321902
-    ##  [76] -0.0980089287 -0.0984693758 -0.0407218407  0.0104085481 -0.0696932352
-    ##  [81] -0.0910667142 -0.0141206693 -0.0864367954 -0.0662417432 -0.0754077527
-    ##  [86]  0.0350170713 -0.0619622183 -0.0333679471 -0.0746443158 -0.0345850662
-    ##  [91] -0.0499747430 -0.0546158633 -0.0545916682 -0.0679089227 -0.0285587112
-    ##  [96] -0.0451487043  0.0580375476  0.0186410160  0.0049203453  0.0486228461
+    ## # A tibble: 100 x 1
+    ##        value
+    ##        <dbl>
+    ##  1  0.994   
+    ##  2  0.622   
+    ##  3 -0.0143  
+    ##  4 -0.000441
+    ##  5  0.00257 
+    ##  6 -0.0362  
+    ##  7 -0.109   
+    ##  8 -0.0494  
+    ##  9  0.0946  
+    ## 10 -0.0173  
+    ## # ... with 90 more rows
 
-We've got us a numeric vector of as many values as our data had observations--100 in this case. The `pareto_k` values can be used to examine overly-influential cases. See, for example [this discussion on stackoverflow.com](https://stackoverflow.com/questions/39578834/linear-model-diagnostics-for-bayesian-models-using-rstan/39595436) in which several members of the [Stan team](http://mc-stan.org) weighed in. The issue is also discussed in [this paper](https://arxiv.org/abs/1507.04544), in the [loo reference manual](https://cran.r-project.org/web/packages/loo/loo.pdf), and in [this presentation by Vehtari himself](https://www.youtube.com/watch?v=FUROJM3u5HQ&feature=youtu.be&a=). If we explicitly open the [loo package](https://cran.r-project.org/web/packages/loo/index.html), we can use a few convenience functions to leverage `pareto_k` for diagnostic purposes. The `pareto_k_table()` function will categorize the `pareto_k` values and give us a sense of how many values are in problematic ranges.
+We've got us a numeric vector of as many values as our data had observations--100 in this case. The `pareto_k` values can be used to examine overly-influential cases. See, for example [this discussion on stackoverflow.com](https://stackoverflow.com/questions/39578834/linear-model-diagnostics-for-bayesian-models-using-rstan/39595436) in which several members of the [Stan team](http://mc-stan.org) weighed in. The issue is also discussed in [this paper](https://arxiv.org/abs/1507.04544), in the [loo reference manual](https://cran.r-project.org/web/packages/loo/loo.pdf), and in [this presentation by Aki Vehtari](https://www.youtube.com/watch?v=FUROJM3u5HQ&feature=youtu.be&a=). If we explicitly open the [loo package](https://cran.r-project.org/web/packages/loo/index.html), we can use a few convenience functions to leverage `pareto_k` for diagnostic purposes. The `pareto_k_table()` function will categorize the `pareto_k` values and give us a sense of how many values are in problematic ranges.
 
 ``` r
 library(loo)
@@ -397,7 +417,7 @@ pareto_k_table(loo_b1)
     ##    (0.7, 1]   (bad)       1     1.0%
     ##    (1, Inf)   (very bad)  0     0.0%
 
-Happily, most of our cases were in the "good" range. One pesky case \[can you guess which one?\] was in the "bad" range and another \[and can you guess that one, too?\] was only "ok." The `pareto_k_ids()` function will tell us which cases we'll want to look at.
+Happily, most of our cases were in the "good" range. One pesky case was in the "bad" range \[can you guess which one?\] and another case was only "ok" \[and can you guess that one, too?\]. The `pareto_k_ids()` function will tell exactly us which cases we'll want to look at.
 
 ``` r
 pareto_k_ids(loo_b1)
@@ -405,7 +425,7 @@ pareto_k_ids(loo_b1)
 
     ## [1] 1 2
 
-Those numbers correspond to the row numbers in the data, `o`. These are exactly the cases that plagued our second OLS model, `fit1`.
+Those numbers correspond to the row numbers in the data, `o`. These are exactly the cases that plagued our second OLS model, `fit1`, and are also the ones we hand coded to be outliers.
 
 With the simple `plot()` function, we can get a diagnostic plot for the `pareto_k` values.
 
@@ -413,7 +433,7 @@ With the simple `plot()` function, we can get a diagnostic plot for the `pareto_
 plot(loo_b1)
 ```
 
-![](README_files/figure-markdown_github/unnamed-chunk-20-1.png)
+![](README_files/figure-markdown_github/unnamed-chunk-23-1.png)
 
 There they are, cases 1 and 2, lurking in the "bad" and "\[just\] ok" ranges. We can also make a similar plot with ggplot2. Though it takes a little more work, ggplot2 makes it easy to compare `pareto_k` plots across models with a little faceting.
 
@@ -430,20 +450,26 @@ loo_b0$pareto_k %>%  # The well-behaived data
   mutate(fit = rep(c("fit b0", "fit b1"), each = n()/2)) %>%
 
   ggplot(aes(x = i, y = pareto_k)) +
-  geom_hline(yintercept = c(.5, .7), color = "white") +
+  geom_hline(yintercept = c(.5, .7, 1), color = "white") +
   geom_point(alpha = .5) +
+  geom_text(data = tibble(i = c(3, 6, 2), 
+                          pareto_k = c(.45, .65, .95),
+                          label = c("good", "[just] ok", "bad"),
+                          fit = "fit b0"),
+            aes(label = label),
+            color = "grey50") +
   theme(panel.grid = element_blank(),
         axis.title.x = element_text(face = "italic", family = "Times")) +
   facet_wrap(~fit)
 ```
 
-![](README_files/figure-markdown_github/unnamed-chunk-21-1.png)
+![](README_files/figure-markdown_github/unnamed-chunk-24-1.png)
 
-So with `b0`--the model based on the well-behaved multivariate normal data, `d`--, all the `pareto_k` values hovered around zero in the "good" range. Things got icky with model `b1`. But we know all that. Let's move forward.
+So with `b0`--the model based on the well-behaved multivariate normal data, `d`--, all the `pareto_k` values hovered around zero in the "good" range. Things got concerning with model `b1`. But we know all that. Let's move forward.
 
-### What do we do with those overly-influential outlying values?
+#### What do we do with those overly-influential outlying values?
 
-A typical way to handle outlying values is to delete them based on some criterion, such as the Mahalanobis distance, Cook's *D<sub>i</sub>*, or our new friend, the `pareto_k`. In our next two models, we'll do that. In our `data` arguments, we can use the `slice()` function to omit cases. In model `b1.1`, we simply omit the first and most influential case. In model `b1.2`, we omitted both unduly-influential cases, the values from rows 1 and 2.
+A typical way to handle outlying values is to delete them based on some criterion, such as the Mahalanobis distance, Cook's *D<sub>i</sub>*, or our new friend the `pareto_k`. In our next two models, we'll do that. In our `data` arguments, we can use the `slice()` function to omit cases. In model `b1.1`, we simply omit the first and most influential case. In model `b1.2`, we omitted both unduly-influential cases, the values from rows 1 and 2.
 
 ``` r
 b1.1 <- 
@@ -489,10 +515,9 @@ tidy(b1.2) %>% slice(1:3) %>% mutate_if(is.double, round, digits = 2)
 
 They are closer to the true data generating model (i.e., the code we used to make `d`), especially `b1.2`. However, there are other ways to handle the influential cases without dropping them. Finally, we're ready to switch to Student's t!
 
-Time to leave Gauss for the more general Student's t
-----------------------------------------------------
+### Time to leave Gauss for the more general Student's t
 
-Recall that the normal distribution is equivalent to a Student's t with the degrees of freedom parameter, *nu*, set to infinity. *nu* is fixed. Here we'll relax that assumption and estimate *nu* from the data. Since *nu*'s now a parameter, we'll have to give it a prior. For our first Student's t model, we'll estimate *nu* with the brms default gamma(2, 0.1) prior.
+Recall that the normal distribution is equivalent to a Student's t with the degrees of freedom parameter, *nu*, set to infinity. That is, *nu* is fixed. Here we'll relax that assumption and estimate *nu* from the data just like we estimate *mu* with the linear model and *sigma* as the residual spread. Since *nu*'s now a parameter, we'll have to give it a prior. For our first Student's t model, we'll estimate *nu* with the brms default gamma(2, 0.1) prior.
 
 ``` r
 b2 <- 
@@ -504,7 +529,7 @@ b2 <-
                 set_prior("cauchy(0, 1)", class = "sigma")))
 ```
 
-For the next model, we'll switch out that weak gamma(2, 0.1) for a stronger gamma(4, 1). Before fitting the model, it might be useful to take a peek at what that prior looks like. In the plot, below, the orange density in the background is the default gamma(2, 0.1) and the purple density in the foreground is the stronger gamma(4, 1).
+For the next model, we'll switch out that weak gamma(2, 0.1) for a stronger gamma(4, 1). In some disciplines, the gamma distribution is something of an exotic bird. So before fitting the model, it might be useful to take a peek at what these gamme priors looks like. In the plot, below, the orange density in the background is the default gamma(2, 0.1) and the purple density in the foreground is the stronger gamma(4, 1).
 
 ``` r
 ggplot(data = tibble(x = seq(from = 0, to = 60, by = .1)),
@@ -520,7 +545,7 @@ ggplot(data = tibble(x = seq(from = 0, to = 60, by = .1)),
   theme(panel.grid = element_blank())
 ```
 
-![](README_files/figure-markdown_github/unnamed-chunk-25-1.png)
+![](README_files/figure-markdown_github/unnamed-chunk-28-1.png)
 
 So the default prior is centered around values in the 2 to 30 range, but has a long gentle-sloping tail, allowing the model to yield much larger values for *nu*, as needed. The prior we use below is almost entirely concentrated in the single-digit range. In this case, that will preference Student's t likelihoods with very small *nu* parameters and correspondingly thick tails--easily allowing for extreme values.
 
@@ -610,7 +635,7 @@ b_estimates %>%
         axis.text.y = element_text(hjust = 0))
 ```
 
-![](README_files/figure-markdown_github/unnamed-chunk-30-1.png)
+![](README_files/figure-markdown_github/unnamed-chunk-33-1.png)
 
 You might think of the `b0` slope as the "true" slope. That's the one estimated from the well-behaved multivariate normal data, `d`. That estimate's just where we'd want it to be. The `b1` slope is a disaster--way lower than the others. The slopes for `b1.1` and `b1.2` get better, but at the expense of deleting data. All three of our Student's t models produced slopes that were pretty close to the `b0` slope. They weren't perfect, but, all in all, Students t did pretty okay.
 
@@ -658,7 +683,7 @@ loo_b1$pareto_k %>%
     facet_wrap(~fit)
 ```
 
-![](README_files/figure-markdown_github/unnamed-chunk-32-1.png)
+![](README_files/figure-markdown_github/unnamed-chunk-35-1.png)
 
 Oh man, those Student's t models made our world shiny! In a succession from `b2` through `b4`, each model looked better by `pareto_k`. All were way better than the typical Gaussian model, `b1`. While we're at it, we might compare those for with their LOO values.
 
@@ -682,8 +707,7 @@ In terms of the LOO, `b2` through `b4` were about the same, but all looked bette
 
 If you're new to using information criteria to compare models, you might sit down and soak in [this lecture on the topic](https://www.youtube.com/watch?v=t0pRuy1_190&list=PLDcUM9US4XdM9_N6XUUFrhghGJ4K25bFc&index=8) and [this vignette](https://cran.r-project.org/web/packages/loo/vignettes/loo-example.html) on the LOO in particular. For a more technical introduction, you might check out the references in the loo package's [reference manual](https://cran.r-project.org/web/packages/loo/loo.pdf).
 
-Let's compare a few Bayesian models
------------------------------------
+### Let's compare a few Bayesian models.
 
 That's enough with coefficients, `pareto_k`, and the LOO. Let's get a sense of the implications of the models by comparing a few in plots.
 
@@ -734,7 +758,7 @@ ggplot(data = fitted_bs,
   facet_wrap(~model)
 ```
 
-![](README_files/figure-markdown_github/unnamed-chunk-34-1.png)
+![](README_files/figure-markdown_github/unnamed-chunk-37-1.png)
 
 For each subplot, the gray band is the 95% interval band and the overlapping light gray line is the posterior mean. Model `b0`, recall, is our baseline comparison model. This is of the well-behaved no-outlier data, `d`, using the good old Gaussian likelihood. Model `b1` is of the outlier data, `o`, but still using the non-robust Gaussian likelihood. Model `b3` uses a robust Student's t likelihood with *nu* estimated with the fairly narrow gamma(4, 1) prior. For my money, `b3` did a pretty good job.
 
