@@ -1,9 +1,9 @@
 Robust Linear Regression with Student’s T Distribution
 ======================================================
 
-The purpose of this document is to demonstrate the advantages of the Student's t distribution for regression with outliers, particularly within a [Bayesian framework](https://www.youtube.com/channel/UCNJK6_DZvcMqNSzQdEkzvzA/playlists).
+The purpose of this project is to demonstrate the advantages of the Student's t distribution for regression with outliers, particularly within a [Bayesian framework](https://www.youtube.com/channel/UCNJK6_DZvcMqNSzQdEkzvzA/playlists).
 
-In this document, I’m presuming you are familiar with linear regression, familiar with the basic differences between frequentist and Bayesian approaches to fitting regression models, and have a sense that the issue of outlier values is a pickle worth contending with. All code in is [R](https://www.r-bloggers.com/why-use-r-five-reasons/), with a heavy use of the [tidyverse](http://style.tidyverse.org)--which you might learn a lot about [here, especially chapter 5](http://r4ds.had.co.nzhttp://r4ds.had.co.nz)--, and the [brms](https://cran.r-project.org/web/packages/brms/index.html) package.
+For this project, I’m presuming you are familiar with linear regression, familiar with the basic differences between frequentist and Bayesian approaches to fitting regression models, and have a sense that the issue of outlier values is a pickle worth contending with. All code in is [R](https://www.r-bloggers.com/why-use-r-five-reasons/), with a heavy use of the [tidyverse](http://style.tidyverse.org)--which you might learn a lot about [here, especially chapter 5](http://r4ds.had.co.nzhttp://r4ds.had.co.nz)--, and the [brms](https://cran.r-project.org/web/packages/brms/index.html) package.
 
 The problem.
 ------------
@@ -72,8 +72,8 @@ Note how low Z scores are more probable in this Student’s t than in the Gaussi
 
 In order to demonstrate, let's simulate our own. We'll start by creating multivariate normal data.
 
-Let's create our initial tibble of well-behaved data, `d`
----------------------------------------------------------
+Let's create our initial [tibble](https://cran.r-project.org/web/packages/tibble/vignettes/tibble.html) of well-behaved data, `d`
+---------------------------------------------------------------------------------------------------------------------------------
 
 First, we'll need to define our variance/covariance matrix.
 
@@ -204,7 +204,7 @@ tidy(fit1) %>% mutate_if(is.double, round, digits = 2)
     ## 1 (Intercept)     0.12      0.11      1.12    0.26
     ## 2           x     0.15      0.13      1.21    0.23
 
-Just two odd and influential values dramatically changed the model parameters, particularly the slope. Let's plot the data to get a visual sense of what happened.
+Just two odd and influential values dramatically changed the model parameters, particularly the slope. Let's plot the data and the models to get a visual sense of what happened.
 
 ``` r
 # The well-behaived data
@@ -291,7 +291,7 @@ For the model of the well-behaved data, `fit0`, we have *D<sub>i</sub>* values a
 Switching to a Bayesian framework
 ---------------------------------
 
-In this document, we'll use the [brms package](https://cran.r-project.org/web/packages/brms/index.html) to fit our Bayesian regression models. You can learn a lot about brms [here](https://cran.r-project.org/web/packages/brms/vignettes/brms_overview.pdf) and [here](https://github.com/paul-buerkner/brms). To keep things simple, we'll use [weakly-regularizing priors](https://github.com/stan-dev/stan/wiki/Prior-Choice-Recommendations).
+In this project, we'll use the [brms package](https://cran.r-project.org/web/packages/brms/index.html) to fit our Bayesian regression models. You can learn a lot about brms [here](https://cran.r-project.org/web/packages/brms/vignettes/brms_overview.pdf) and [here](https://github.com/paul-buerkner/brms). To keep things simple, we'll use [weakly-regularizing priors](https://github.com/stan-dev/stan/wiki/Prior-Choice-Recommendations).
 
 ``` r
 library(brms)
@@ -529,7 +529,7 @@ b2 <-
                 set_prior("cauchy(0, 1)", class = "sigma")))
 ```
 
-For the next model, we'll switch out that weak gamma(2, 0.1) for a stronger gamma(4, 1). In some disciplines, the gamma distribution is something of an exotic bird. So before fitting the model, it might be useful to take a peek at what these gamme priors looks like. In the plot, below, the orange density in the background is the default gamma(2, 0.1) and the purple density in the foreground is the stronger gamma(4, 1).
+For the next model, we'll switch out that weak gamma(2, 0.1) for a stronger gamma(4, 1). In some disciplines, the gamma distribution is something of an exotic bird. So before fitting the model, it might be useful to take a peek at what these gamma priors looks like. In the plot, below, the orange density in the background is the default gamma(2, 0.1) and the purple density in the foreground is the stronger gamma(4, 1).
 
 ``` r
 ggplot(data = tibble(x = seq(from = 0, to = 60, by = .1)),
@@ -570,7 +570,7 @@ b4 <-
                 set_prior("cauchy(0, 1)", class = "sigma")))
 ```
 
-Now we've got all those models, we can put all their estimates into one tibble.
+Now we've got all those models, we can gather their results into a sole tibble.
 
 ``` r
 # We have to detach MASS and reload tidyverse so we might use tidyverse::select()
@@ -614,7 +614,7 @@ b_estimates %>%
     ## 13    b3         b_x     0.36      0.10  0.19  0.53
     ## 14    b4         b_x     0.36      0.10  0.19  0.53
 
-The models differ by their intercepts, slopes, sigmas, and *nu*s. For the sake of this document, we'll focus on the slopes. Here we compare the different Bayesian models' slopes by their posterior means and 95% intervals in a coefficient plot.
+The models differ by their intercepts, slopes, sigmas, and *nu*s. For the sake of this project, we'll focus on the slopes. Here we compare the different Bayesian models' slopes by their posterior means and 95% intervals in a coefficient plot.
 
 ``` r
 b_estimates %>%
