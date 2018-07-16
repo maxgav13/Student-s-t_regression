@@ -5,8 +5,8 @@ The purpose of this project is to demonstrate the advantages of the Student's t 
 
 For this project, I’m presuming you are familiar with linear regression, familiar with the basic differences between frequentist and Bayesian approaches to fitting regression models, and have a sense that the issue of outlier values is a pickle worth contending with. All code in is [R](https://www.r-bloggers.com/why-use-r-five-reasons/), with a heavy use of the [tidyverse](http://style.tidyverse.org)--which you might learn a lot about [here, especially chapter 5](http://r4ds.had.co.nzhttp://r4ds.had.co.nz)--, and the [brms](https://cran.r-project.org/web/packages/brms/index.html) package.
 
-The problem.
-------------
+The problem
+-----------
 
 Regression models typically use the Gaussian likelihood. The Gaussian likelihood is a sensible default choice for many data types. Unfortunately, the normal (i.e., Gaussian) distribution is sensitive to outliers.
 
@@ -51,22 +51,22 @@ In the table, below, we compare the probability of a given Z score or lower with
 # Here we pic our nu
 nu <- 5
 
-tibble(Z_score = 0:-5,
-       p_Gauss = pnorm(Z_score, mean = 0, sd = 1),
-       p_Student_t = pt(Z_score, df = nu),
+tibble(Z_score               = 0:-5,
+       p_Gauss               = pnorm(Z_score, mean = 0, sd = 1),
+       p_Student_t           = pt(Z_score, df = nu),
        `Student/Gauss ratio` = p_Student_t/p_Gauss) %>%
   mutate_if(is.double, round, digits = 5)
 ```
 
     ## # A tibble: 6 x 4
-    ##   Z_score   p_Gauss p_Student_t `Student/Gauss ratio`
-    ##     <int>     <dbl>       <dbl>                 <dbl>
-    ## 1       0 0.500         0.500                    1.00
-    ## 2      -1 0.159         0.182                    1.14
-    ## 3      -2 0.0228        0.0510                   2.24
-    ## 4      -3 0.00135       0.0150                  11.1 
-    ## 5      -4 0.0000300     0.00516                163   
-    ## 6      -5 0             0.00205               7160
+    ##   Z_score p_Gauss p_Student_t `Student/Gauss ratio`
+    ##     <int>   <dbl>       <dbl>                 <dbl>
+    ## 1       0 0.5         0.5                      1   
+    ## 2      -1 0.159       0.182                    1.14
+    ## 3      -2 0.0228      0.0510                   2.24
+    ## 4      -3 0.00135     0.0150                  11.1 
+    ## 5      -4 0.00003     0.00516                163.  
+    ## 6      -5 0           0.00205               7160.
 
 Note how low Z scores are more probable in this Student’s t than in the Gaussian. This is most apparent in the `Student/Gauss ratio` column on the right. A consequence of this is that extreme scores are less influential to your solutions when you use a small-*nu* Student’s t distribution in place of the Gaussian. That is, the small-*nu* Student’s t is more robust than the Gaussian to unusual and otherwise influential observations.
 
@@ -100,9 +100,7 @@ Third, we'll use the `mvrnorm()` function from the [MASS package](https://cran.r
 library(MASS)
 
 set.seed(3)
-d <- mvrnorm(n = 100, mu = m, Sigma = s)
-d <- 
-  d %>%
+d <- mvrnorm(n = 100, mu = m, Sigma = s) %>%
   as_tibble() %>%
   rename(y = V1, x = V2)
 ```
@@ -161,8 +159,8 @@ head(o)
     ## # A tibble: 6 x 2
     ##        y     x
     ##    <dbl> <dbl>
-    ## 1  5.00  -1.84
-    ## 2  4.00  -1.71
+    ## 1  5     -1.84
+    ## 2  4     -1.71
     ## 3 -0.168 -1.60
     ## 4 -0.292 -1.46
     ## 5 -0.785 -1.40
@@ -170,7 +168,7 @@ head(o)
 
 With the code, above, we replaced the first two values of our first variable, `y`. They both started out quite negative. Now they are positive values of a large magnitude in the standardized metric.
 
-Frequentist OLS Models
+Frequentist OLS models
 ----------------------
 
 To get a quick sense of what we've done, we'll first fit two models with OLS regression. The first model, `fit0`, is of the multivariate normal data, `d`. The second model, `fit1`, is on the otherwise identical data with the two odd and influential values, `o`. Here is our model code.
@@ -306,15 +304,15 @@ b0 <-
   brm(data = d, family = gaussian,
       y ~ 1 + x,
       prior = c(set_prior("normal(0, 100)", class = "Intercept"),
-                set_prior("normal(0, 10)", class = "b"),
-                set_prior("cauchy(0, 1)", class = "sigma")))
+                set_prior("normal(0, 10)",  class = "b"),
+                set_prior("cauchy(0, 1)",   class = "sigma")))
 
 b1 <- 
   brm(data = o, family = gaussian,
       y ~ 1 + x,
       prior = c(set_prior("normal(0, 100)", class = "Intercept"),
-                set_prior("normal(0, 10)", class = "b"),
-                set_prior("cauchy(0, 1)", class = "sigma")))
+                set_prior("normal(0, 10)",  class = "b"),
+                set_prior("cauchy(0, 1)",   class = "sigma")))
 ```
 
 Here are the model summaries.
@@ -323,23 +321,19 @@ Here are the model summaries.
 tidy(b0) %>% slice(1:3) %>% mutate_if(is.double, round, digits = 2)
 ```
 
-    ## # A tibble: 3 x 5
-    ##   term        estimate std.error  lower upper
-    ##   <chr>          <dbl>     <dbl>  <dbl> <dbl>
-    ## 1 b_Intercept  -0.0100    0.0900 -0.150 0.130
-    ## 2 b_x           0.440     0.100   0.280 0.610
-    ## 3 sigma         0.860     0.0600  0.770 0.970
+    ##          term estimate std.error lower upper
+    ## 1 b_Intercept    -0.01      0.09 -0.15  0.13
+    ## 2         b_x     0.44      0.10  0.28  0.61
+    ## 3       sigma     0.86      0.06  0.77  0.97
 
 ``` r
 tidy(b1) %>% slice(1:3) %>% mutate_if(is.double, round, digits = 2)
 ```
 
-    ## # A tibble: 3 x 5
-    ##   term        estimate std.error   lower upper
-    ##   <chr>          <dbl>     <dbl>   <dbl> <dbl>
-    ## 1 b_Intercept    0.120    0.110  -0.0500 0.300
-    ## 2 b_x            0.150    0.130  -0.0600 0.370
-    ## 3 sigma          1.11     0.0800  0.980  1.24
+    ##          term estimate std.error lower upper
+    ## 1 b_Intercept     0.12      0.11 -0.05  0.30
+    ## 2         b_x     0.15      0.13 -0.06  0.37
+    ## 3       sigma     1.11      0.08  0.98  1.24
 
 These should look familiar. They're very much like the results from the OLS models. Hopefully this isn't surprising. Our priors were quite weak, so there's no reason to suspect the results would differ much.
 
@@ -364,41 +358,49 @@ We'll use `str()` to get a sense of what's all in there, using `loo_b1` as an ex
 str(loo_b1)
 ```
 
-    ## List of 9
-    ##  $ elpd_loo   : num -156
-    ##  $ p_loo      : num 7.02
-    ##  $ looic      : num 312
-    ##  $ se_elpd_loo: num 15.7
-    ##  $ se_p_loo   : num 4.19
-    ##  $ se_looic   : num 31.4
-    ##  $ pointwise  : num [1:100, 1:3] -14.45 -9.12 -1.04 -1.06 -1.25 ...
+    ## List of 11
+    ##  $ estimates  : num [1:3, 1:2] -155.87 6.96 311.73 15.64 4.14 ...
+    ##   ..- attr(*, "dimnames")=List of 2
+    ##   .. ..$ : chr [1:3] "elpd_loo" "p_loo" "looic"
+    ##   .. ..$ : chr [1:2] "Estimate" "SE"
+    ##  $ pointwise  : num [1:100, 1:4] -14.4 -9.11 -1.04 -1.06 -1.25 ...
     ##   ..- attr(*, "dimnames")=List of 2
     ##   .. ..$ : NULL
-    ##   .. ..$ : chr [1:3] "elpd_loo" "p_loo" "looic"
-    ##  $ pareto_k   : num [1:100] 0.994483 0.622069 -0.014279 -0.000441 0.002575 ...
+    ##   .. ..$ : chr [1:4] "elpd_loo" "mcse_elpd_loo" "p_loo" "looic"
+    ##  $ diagnostics:List of 2
+    ##   ..$ pareto_k: num [1:100] 0.8601 0.59858 0.01056 0.04748 -0.00126 ...
+    ##   ..$ n_eff   : num [1:100] 29.5 274.1 3974.1 3971.7 3924 ...
+    ##  $ psis_object: NULL
+    ##  $ elpd_loo   : num -156
+    ##  $ p_loo      : num 6.96
+    ##  $ looic      : num 312
+    ##  $ se_elpd_loo: num 15.6
+    ##  $ se_p_loo   : num 4.14
+    ##  $ se_looic   : num 31.3
     ##  $ model_name : chr "b1"
-    ##  - attr(*, "log_lik_dim")= int [1:2] 4000 100
-    ##  - attr(*, "class")= chr [1:2] "ic" "loo"
+    ##  - attr(*, "dims")= int [1:2] 4000 100
+    ##  - attr(*, "class")= chr [1:3] "ic" "psis_loo" "loo"
+    ##  - attr(*, "yhash")= chr "5cdc17bb2cb41f3e3f0a617f418fff3fbb8e1ebf"
 
 For a detailed explanation of all those elements, see the [reference manual](https://cran.r-project.org/web/packages/loo/loo.pdf). For our purposes, we'll focus on `pareto_k`. Here's a glimpse of what it contains for the `b1` model.
 
 ``` r
-loo_b1$pareto_k %>% as_tibble()
+loo_b1$diagnostics$pareto_k %>% as_tibble()
 ```
 
     ## # A tibble: 100 x 1
-    ##        value
-    ##        <dbl>
-    ##  1  0.994   
-    ##  2  0.622   
-    ##  3 -0.0143  
-    ##  4 -0.000441
-    ##  5  0.00257 
-    ##  6 -0.0362  
-    ##  7 -0.109   
-    ##  8 -0.0494  
-    ##  9  0.0946  
-    ## 10 -0.0173  
+    ##       value
+    ##       <dbl>
+    ##  1  0.860  
+    ##  2  0.599  
+    ##  3  0.0106 
+    ##  4  0.0475 
+    ##  5 -0.00126
+    ##  6  0.0239 
+    ##  7 -0.00829
+    ##  8 -0.0499 
+    ##  9  0.252  
+    ## 10  0.0288 
     ## # ... with 90 more rows
 
 We've got us a numeric vector of as many values as our data had observations--100 in this case. The `pareto_k` values can be used to examine overly-influential cases. See, for example [this discussion on stackoverflow.com](https://stackoverflow.com/questions/39578834/linear-model-diagnostics-for-bayesian-models-using-rstan/39595436) in which several members of the [Stan team](http://mc-stan.org) weighed in. The issue is also discussed in [this paper](https://arxiv.org/abs/1507.04544), in the [loo reference manual](https://cran.r-project.org/web/packages/loo/loo.pdf), and in [this presentation by Aki Vehtari](https://www.youtube.com/watch?v=FUROJM3u5HQ&feature=youtu.be&a=). If we explicitly open the [loo package](https://cran.r-project.org/web/packages/loo/index.html), we can use a few convenience functions to leverage `pareto_k` for diagnostic purposes. The `pareto_k_table()` function will categorize the `pareto_k` values and give us a sense of how many values are in problematic ranges.
@@ -409,13 +411,12 @@ library(loo)
 pareto_k_table(loo_b1)
 ```
 
-    ## 
     ## Pareto k diagnostic values:
-    ##                          Count  Pct 
-    ## (-Inf, 0.5]   (good)     98    98.0%
-    ##  (0.5, 0.7]   (ok)        1     1.0%
-    ##    (0.7, 1]   (bad)       1     1.0%
-    ##    (1, Inf)   (very bad)  0     0.0%
+    ##                          Count Pct.    Min. n_eff
+    ## (-Inf, 0.5]   (good)     98    98.0%   3520      
+    ##  (0.5, 0.7]   (ok)        1     1.0%   274       
+    ##    (0.7, 1]   (bad)       1     1.0%   29        
+    ##    (1, Inf)   (very bad)  0     0.0%   <NA>
 
 Happily, most of our cases were in the "good" range. One pesky case was in the "bad" range \[can you guess which one?\] and another case was only "ok" \[and can you guess that one, too?\]. The `pareto_k_ids()` function will tell exactly us which cases we'll want to look at.
 
@@ -438,11 +439,11 @@ plot(loo_b1)
 There they are, cases 1 and 2, lurking in the "bad" and "\[just\] ok" ranges. We can also make a similar plot with ggplot2. Though it takes a little more work, ggplot2 makes it easy to compare `pareto_k` plots across models with a little faceting.
 
 ``` r
-loo_b0$pareto_k %>%  # The well-behaived data
+loo_b0$diagnostics$pareto_k %>%  # The well-behaived data
   as_tibble() %>%
   mutate(i = 1:n()) %>%
   bind_rows(  # The data with two outliers
-    loo_b1$pareto_k %>% 
+    loo_b1$diagnostics$pareto_k %>% 
       as_tibble() %>%
       mutate(i = 1:n()) 
   ) %>%
@@ -477,16 +478,16 @@ b1.1 <-
       family = gaussian,
       y ~ 1 + x,
       prior = c(set_prior("normal(0, 100)", class = "Intercept"),
-                set_prior("normal(0, 10)", class = "b"),
-                set_prior("cauchy(0, 1)", class = "sigma")))
+                set_prior("normal(0, 10)",  class = "b"),
+                set_prior("cauchy(0, 1)",   class = "sigma")))
 
 b1.2 <- 
   brm(data = o %>% slice(3:100), 
       family = gaussian,
       y ~ 1 + x,
       prior = c(set_prior("normal(0, 100)", class = "Intercept"),
-                set_prior("normal(0, 10)", class = "b"),
-                set_prior("cauchy(0, 1)", class = "sigma")))
+                set_prior("normal(0, 10)",  class = "b"),
+                set_prior("cauchy(0, 1)",   class = "sigma")))
 ```
 
 Here are the summaries for our models based on the `slice[d]` data.
@@ -495,23 +496,19 @@ Here are the summaries for our models based on the `slice[d]` data.
 tidy(b1.1) %>% slice(1:3) %>% mutate_if(is.double, round, digits = 2)
 ```
 
-    ## # A tibble: 3 x 5
-    ##   term        estimate std.error  lower upper
-    ##   <chr>          <dbl>     <dbl>  <dbl> <dbl>
-    ## 1 b_Intercept   0.0600    0.100  -0.100 0.220
-    ## 2 b_x           0.290     0.110   0.100 0.470
-    ## 3 sigma         0.970     0.0700  0.860 1.10
+    ##          term estimate std.error lower upper
+    ## 1 b_Intercept     0.07      0.10 -0.09  0.23
+    ## 2         b_x     0.29      0.11  0.10  0.47
+    ## 3       sigma     0.97      0.07  0.87  1.10
 
 ``` r
 tidy(b1.2) %>% slice(1:3) %>% mutate_if(is.double, round, digits = 2)
 ```
 
-    ## # A tibble: 3 x 5
-    ##   term        estimate std.error  lower upper
-    ##   <chr>          <dbl>     <dbl>  <dbl> <dbl>
-    ## 1 b_Intercept   0.0200    0.0900 -0.130 0.160
-    ## 2 b_x           0.390     0.100   0.230 0.560
-    ## 3 sigma         0.860     0.0600  0.770 0.960
+    ##          term estimate std.error lower upper
+    ## 1 b_Intercept     0.01      0.09 -0.13  0.16
+    ## 2         b_x     0.40      0.10  0.23  0.57
+    ## 3       sigma     0.86      0.06  0.76  0.97
 
 They are closer to the true data generating model (i.e., the code we used to make `d`), especially `b1.2`. However, there are other ways to handle the influential cases without dropping them. Finally, we're ready to switch to Student's t!
 
@@ -524,16 +521,16 @@ b2 <-
   brm(data = o, family = student,
       y ~ 1 + x,
       prior = c(set_prior("normal(0, 100)", class = "Intercept"),
-                set_prior("normal(0, 10)", class = "b"),
-                set_prior("gamma(2, 0.1)", class = "nu"),
-                set_prior("cauchy(0, 1)", class = "sigma")))
+                set_prior("normal(0, 10)",  class = "b"),
+                set_prior("gamma(2, 0.1)",  class = "nu"),
+                set_prior("cauchy(0, 1)",   class = "sigma")))
 ```
 
 For the next model, we'll switch out that weak gamma(2, 0.1) for a stronger gamma(4, 1). In some disciplines, the gamma distribution is something of an exotic bird. So before fitting the model, it might be useful to take a peek at what these gamma priors looks like. In the plot, below, the orange density in the background is the default gamma(2, 0.1) and the purple density in the foreground is the stronger gamma(4, 1).
 
 ``` r
-ggplot(data = tibble(x = seq(from = 0, to = 60, by = .1)),
-       aes(x = x)) +
+tibble(x = seq(from = 0, to = 60, by = .1)) %>% 
+  ggplot(aes(x = x)) +
   geom_ribbon(aes(ymin = 0, 
                   ymax = dgamma(x, 2, 0.1)),
               fill = viridis_pal(direction = 1, option = "C")(5)[4], alpha = 3/4) +
@@ -554,9 +551,9 @@ b3 <-
   brm(data = o, family = student,
       y ~ 1 + x,
       prior = c(set_prior("normal(0, 100)", class = "Intercept"),
-                set_prior("normal(0, 10)", class = "b"),
-                set_prior("gamma(4, 1)", class = "nu"),
-                set_prior("cauchy(0, 1)", class = "sigma")))
+                set_prior("normal(0, 10)",  class = "b"),
+                set_prior("gamma(4, 1)",    class = "nu"),
+                set_prior("cauchy(0, 1)",   class = "sigma")))
 ```
 
 For our final model, we'll fix the *nu* parameter in a `bf()` statement.
@@ -566,8 +563,8 @@ b4 <-
   brm(data = o, family = student,
       bf(y ~ 1 + x, nu = 4),
       prior = c(set_prior("normal(0, 100)", class = "Intercept"),
-                set_prior("normal(0, 10)", class = "b"),
-                set_prior("cauchy(0, 1)", class = "sigma")))
+                set_prior("normal(0, 10)",  class = "b"),
+                set_prior("cauchy(0, 1)",   class = "sigma")))
 ```
 
 Now we've got all those models, we can gather their results into a sole tibble.
@@ -601,18 +598,18 @@ b_estimates %>%
     ##    model        term estimate std.error lower upper
     ## 1     b0 b_Intercept    -0.01      0.09 -0.15  0.13
     ## 2     b1 b_Intercept     0.12      0.11 -0.05  0.30
-    ## 3   b1.1 b_Intercept     0.06      0.10 -0.10  0.22
-    ## 4   b1.2 b_Intercept     0.02      0.09 -0.13  0.16
-    ## 5     b2 b_Intercept     0.04      0.09 -0.10  0.19
-    ## 6     b3 b_Intercept     0.04      0.09 -0.11  0.19
-    ## 7     b4 b_Intercept     0.04      0.09 -0.11  0.20
+    ## 3   b1.1 b_Intercept     0.07      0.10 -0.09  0.23
+    ## 4   b1.2 b_Intercept     0.01      0.09 -0.13  0.16
+    ## 5     b2 b_Intercept     0.05      0.10 -0.12  0.20
+    ## 6     b3 b_Intercept     0.04      0.09 -0.12  0.19
+    ## 7     b4 b_Intercept     0.04      0.10 -0.12  0.20
     ## 8     b0         b_x     0.44      0.10  0.28  0.61
     ## 9     b1         b_x     0.15      0.13 -0.06  0.37
     ## 10  b1.1         b_x     0.29      0.11  0.10  0.47
-    ## 11  b1.2         b_x     0.39      0.10  0.23  0.56
-    ## 12    b2         b_x     0.35      0.11  0.17  0.53
+    ## 11  b1.2         b_x     0.40      0.10  0.23  0.57
+    ## 12    b2         b_x     0.35      0.11  0.17  0.52
     ## 13    b3         b_x     0.36      0.10  0.19  0.53
-    ## 14    b4         b_x     0.36      0.10  0.19  0.53
+    ## 14    b4         b_x     0.37      0.10  0.20  0.53
 
 The models differ by their intercepts, slopes, sigmas, and *nu*s. For the sake of this project, we'll focus on the slopes. Here we compare the different Bayesian models' slopes by their posterior means and 95% intervals in a coefficient plot.
 
@@ -652,21 +649,21 @@ loo_b4 <- loo(b4)
 With a little data wrangling, we can compare our models by how they look in our custom `pareto_k` diagnostic plots.
 
 ``` r
-loo_b1$pareto_k %>% 
+loo_b1$diagnostics$pareto_k %>% 
   as_tibble() %>%
   mutate(i = 1:n()) %>%
   bind_rows(
-    loo_b2$pareto_k %>% 
+    loo_b2$diagnostics$pareto_k %>% 
       as_tibble() %>%
       mutate(i = 1:n()) 
   ) %>%
   bind_rows(
-    loo_b3$pareto_k %>% 
+    loo_b3$diagnostics$pareto_k %>% 
       as_tibble() %>%
       mutate(i = 1:n()) 
   ) %>%
   bind_rows(
-    loo_b4$pareto_k %>% 
+    loo_b4$diagnostics$pareto_k %>% 
       as_tibble() %>%
       mutate(i = 1:n()) 
   ) %>%
@@ -692,16 +689,16 @@ compare_ic(loo_b1, loo_b2, loo_b3, loo_b4)
 ```
 
     ##          LOOIC    SE
-    ## b1      311.84 31.37
-    ## b2      289.96 23.18
-    ## b3      287.62 20.84
-    ## b4      286.20 20.19
-    ## b1 - b2  21.88 11.85
-    ## b1 - b3  24.22 14.90
-    ## b1 - b4  25.63 15.75
-    ## b2 - b3   2.35  3.18
-    ## b2 - b4   3.76  4.07
-    ## b3 - b4   1.41  0.89
+    ## b1      311.73 31.28
+    ## b2      290.36 23.07
+    ## b3      287.75 20.81
+    ## b4      286.18 20.20
+    ## b1 - b2  21.37 11.85
+    ## b1 - b3  23.98 14.80
+    ## b1 - b4  25.55 15.65
+    ## b2 - b3   2.60  3.09
+    ## b2 - b4   4.18  3.96
+    ## b3 - b4   1.57  0.88
 
 In terms of the LOO, `b2` through `b4` were about the same, but all looked better than `b1`. In fairness, though, the standard errors for the difference scores were a bit on the wide side.
 
@@ -738,8 +735,8 @@ fitted_bs <-
 # The plot
 ggplot(data = fitted_bs, 
        aes(x = x)) +
-  geom_ribbon(aes(ymin = `2.5%ile`,
-                  ymax = `97.5%ile`),
+  geom_ribbon(aes(ymin = Q2.5,
+                  ymax = Q97.5),
               fill = "grey67") +
   geom_line(aes(y = Estimate),
             color = "grey92") +
@@ -762,15 +759,60 @@ ggplot(data = fitted_bs,
 
 For each subplot, the gray band is the 95% interval band and the overlapping light gray line is the posterior mean. Model `b0`, recall, is our baseline comparison model. This is of the well-behaved no-outlier data, `d`, using the good old Gaussian likelihood. Model `b1` is of the outlier data, `o`, but still using the non-robust Gaussian likelihood. Model `b3` uses a robust Student's t likelihood with *nu* estimated with the fairly narrow gamma(4, 1) prior. For my money, `b3` did a pretty good job.
 
-Note. The analyses in this document were done with:
+``` r
+sessionInfo()
+```
 
--   R 3.4.4
--   RStudio 1.1.442
--   rmarkdown 1.9
--   tidyverse 1.2.1
--   viridis 0.4.0
--   MASS 7.3-47
--   broom 0.4.3
--   brms 2.1.9
--   rstan 2.17.3
--   loo 1.1.0
+    ## R version 3.5.1 (2018-07-02)
+    ## Platform: x86_64-apple-darwin15.6.0 (64-bit)
+    ## Running under: macOS High Sierra 10.13.4
+    ## 
+    ## Matrix products: default
+    ## BLAS: /Library/Frameworks/R.framework/Versions/3.5/Resources/lib/libRblas.0.dylib
+    ## LAPACK: /Library/Frameworks/R.framework/Versions/3.5/Resources/lib/libRlapack.dylib
+    ## 
+    ## locale:
+    ## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+    ## 
+    ## attached base packages:
+    ## [1] stats     graphics  grDevices utils     datasets  methods   base     
+    ## 
+    ## other attached packages:
+    ##  [1] loo_2.0.0         brms_2.3.4        Rcpp_0.12.17     
+    ##  [4] broom_0.4.5       bindrcpp_0.2.2    viridis_0.5.1    
+    ##  [7] viridisLite_0.3.0 forcats_0.3.0     stringr_1.3.1    
+    ## [10] dplyr_0.7.6       purrr_0.2.5       readr_1.1.1      
+    ## [13] tidyr_0.8.1       tibble_1.4.2      ggplot2_3.0.0    
+    ## [16] tidyverse_1.2.1  
+    ## 
+    ## loaded via a namespace (and not attached):
+    ##  [1] nlme_3.1-137         matrixStats_0.53.1   xts_0.10-2          
+    ##  [4] lubridate_1.7.4      threejs_0.3.1        httr_1.3.1          
+    ##  [7] rprojroot_1.3-2      rstan_2.17.3         tools_3.5.1         
+    ## [10] backports_1.1.2      utf8_1.1.4           R6_2.2.2            
+    ## [13] DT_0.4               lazyeval_0.2.1       colorspace_1.3-2    
+    ## [16] withr_2.1.2          tidyselect_0.2.4     gridExtra_2.3       
+    ## [19] mnormt_1.5-5         Brobdingnag_1.2-5    compiler_3.5.1      
+    ## [22] cli_1.0.0            rvest_0.3.2          shinyjs_1.0         
+    ## [25] xml2_1.2.0           colourpicker_1.0     labeling_0.3        
+    ## [28] scales_0.5.0         dygraphs_1.1.1.5     mvtnorm_1.0-8       
+    ## [31] psych_1.8.4          ggridges_0.5.0       digest_0.6.15       
+    ## [34] StanHeaders_2.17.2   foreign_0.8-70       rmarkdown_1.10      
+    ## [37] base64enc_0.1-3      pkgconfig_2.0.1      htmltools_0.3.6     
+    ## [40] htmlwidgets_1.2      rlang_0.2.1          readxl_1.1.0        
+    ## [43] rstudioapi_0.7       shiny_1.1.0          bindr_0.1.1         
+    ## [46] zoo_1.8-2            jsonlite_1.5         gtools_3.8.1        
+    ## [49] crosstalk_1.0.0      inline_0.3.15        magrittr_1.5        
+    ## [52] bayesplot_1.5.0      Matrix_1.2-14        munsell_0.5.0       
+    ## [55] abind_1.4-5          stringi_1.2.3        yaml_2.1.19         
+    ## [58] plyr_1.8.4           grid_3.5.1           parallel_3.5.1      
+    ## [61] promises_1.0.1       crayon_1.3.4         miniUI_0.1.1.1      
+    ## [64] lattice_0.20-35      haven_1.1.2          hms_0.4.2           
+    ## [67] knitr_1.20           pillar_1.2.3         igraph_1.2.1        
+    ## [70] markdown_0.8         shinystan_2.5.0      codetools_0.2-15    
+    ## [73] reshape2_1.4.3       stats4_3.5.1         rstantools_1.5.0    
+    ## [76] glue_1.2.0           evaluate_0.10.1      modelr_0.1.2        
+    ## [79] httpuv_1.4.4.2       cellranger_1.1.0     gtable_0.2.0        
+    ## [82] assertthat_0.2.0     mime_0.5             xtable_1.8-2        
+    ## [85] coda_0.19-1          later_0.7.3          rsconnect_0.8.8     
+    ## [88] shinythemes_1.1.1    bridgesampling_0.4-0

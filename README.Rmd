@@ -10,7 +10,7 @@ The purpose of this project is to demonstrate the advantages of the Student's t 
 
 For this project, I’m presuming you are familiar with linear regression, familiar with the basic differences between frequentist and Bayesian approaches to fitting regression models, and have a sense that the issue of outlier values is a pickle worth contending with. All code in is [R](https://www.r-bloggers.com/why-use-r-five-reasons/), with a heavy use of the [tidyverse](http://style.tidyverse.org)--which you might learn a lot about [here, especially chapter 5](http://r4ds.had.co.nzhttp://r4ds.had.co.nz)--, and the [brms](https://cran.r-project.org/web/packages/brms/index.html) package.
 
-## The problem.
+## The problem
 
 Regression models typically use the Gaussian likelihood. The Gaussian likelihood is a sensible default choice for many data types. Unfortunately, the normal (i.e., Gaussian) distribution is sensitive to outliers. 
 
@@ -53,9 +53,9 @@ In the table, below, we compare the probability of a given Z score or lower with
 # Here we pic our nu
 nu <- 5
 
-tibble(Z_score = 0:-5,
-       p_Gauss = pnorm(Z_score, mean = 0, sd = 1),
-       p_Student_t = pt(Z_score, df = nu),
+tibble(Z_score               = 0:-5,
+       p_Gauss               = pnorm(Z_score, mean = 0, sd = 1),
+       p_Student_t           = pt(Z_score, df = nu),
        `Student/Gauss ratio` = p_Student_t/p_Gauss) %>%
   mutate_if(is.double, round, digits = 5)
 ```
@@ -91,9 +91,7 @@ Third, we'll use the `mvrnorm()` function from the [MASS package](https://cran.r
 library(MASS)
 
 set.seed(3)
-d <- mvrnorm(n = 100, mu = m, Sigma = s)
-d <- 
-  d %>%
+d <- mvrnorm(n = 100, mu = m, Sigma = s) %>%
   as_tibble() %>%
   rename(y = V1, x = V2)
 ```
@@ -130,7 +128,7 @@ head(o)
 
 With the code, above, we replaced the first two values of our first variable, `y`. They both started out quite negative. Now they are positive values of a large magnitude in the standardized metric.
 
-## Frequentist OLS Models
+## Frequentist OLS models
 
 To get a quick sense of what we've done, we'll first fit two models with OLS regression. The first model, `fit0`, is of the multivariate normal data, `d`. The second model, `fit1`, is on the otherwise identical data with the two odd and influential values, `o`. Here is our model code.
 
@@ -236,15 +234,15 @@ b0 <-
   brm(data = d, family = gaussian,
       y ~ 1 + x,
       prior = c(set_prior("normal(0, 100)", class = "Intercept"),
-                set_prior("normal(0, 10)", class = "b"),
-                set_prior("cauchy(0, 1)", class = "sigma")))
+                set_prior("normal(0, 10)",  class = "b"),
+                set_prior("cauchy(0, 1)",   class = "sigma")))
 
 b1 <- 
   brm(data = o, family = gaussian,
       y ~ 1 + x,
       prior = c(set_prior("normal(0, 100)", class = "Intercept"),
-                set_prior("normal(0, 10)", class = "b"),
-                set_prior("cauchy(0, 1)", class = "sigma")))
+                set_prior("normal(0, 10)",  class = "b"),
+                set_prior("cauchy(0, 1)",   class = "sigma")))
 ```
 
 Here are the model summaries.
@@ -274,7 +272,7 @@ str(loo_b1)
 For a detailed explanation of all those elements, see the [reference manual](https://cran.r-project.org/web/packages/loo/loo.pdf). For our purposes, we'll focus on `pareto_k`. Here's a glimpse of what it contains for the `b1` model.
 
 ```{r}
-loo_b1$pareto_k %>% as_tibble()
+loo_b1$diagnostics$pareto_k %>% as_tibble()
 ```
 
 We've got us a numeric vector of as many values as our data had observations--100 in this case. The `pareto_k` values can be used to examine overly-influential cases. See, for example [this discussion on stackoverflow.com](https://stackoverflow.com/questions/39578834/linear-model-diagnostics-for-bayesian-models-using-rstan/39595436) in which several members of the [Stan team](http://mc-stan.org) weighed in. The issue is also discussed in [this paper](https://arxiv.org/abs/1507.04544), in the [loo reference manual](https://cran.r-project.org/web/packages/loo/loo.pdf), and in [this presentation by Aki Vehtari](https://www.youtube.com/watch?v=FUROJM3u5HQ&feature=youtu.be&a=). If we explicitly open the [loo package](https://cran.r-project.org/web/packages/loo/index.html), we can use a few convenience functions to leverage `pareto_k` for diagnostic purposes. The `pareto_k_table()` function will categorize the `pareto_k` values and give us a sense of how many values are in problematic ranges.
@@ -302,11 +300,11 @@ plot(loo_b1)
 There they are, cases 1 and 2, lurking in the "bad" and "[just] ok" ranges. We can also make a similar plot with ggplot2. Though it takes a little more work, ggplot2 makes it easy to compare `pareto_k` plots across models with a little faceting.
 
 ```{r, fig.width = 8, fig.height = 3}
-loo_b0$pareto_k %>%  # The well-behaived data
+loo_b0$diagnostics$pareto_k %>%  # The well-behaived data
   as_tibble() %>%
   mutate(i = 1:n()) %>%
   bind_rows(  # The data with two outliers
-    loo_b1$pareto_k %>% 
+    loo_b1$diagnostics$pareto_k %>% 
       as_tibble() %>%
       mutate(i = 1:n()) 
   ) %>%
@@ -339,16 +337,16 @@ b1.1 <-
       family = gaussian,
       y ~ 1 + x,
       prior = c(set_prior("normal(0, 100)", class = "Intercept"),
-                set_prior("normal(0, 10)", class = "b"),
-                set_prior("cauchy(0, 1)", class = "sigma")))
+                set_prior("normal(0, 10)",  class = "b"),
+                set_prior("cauchy(0, 1)",   class = "sigma")))
 
 b1.2 <- 
   brm(data = o %>% slice(3:100), 
       family = gaussian,
       y ~ 1 + x,
       prior = c(set_prior("normal(0, 100)", class = "Intercept"),
-                set_prior("normal(0, 10)", class = "b"),
-                set_prior("cauchy(0, 1)", class = "sigma")))
+                set_prior("normal(0, 10)",  class = "b"),
+                set_prior("cauchy(0, 1)",   class = "sigma")))
 ```
 
 Here are the summaries for our models based on the `slice[d]` data.
@@ -369,16 +367,16 @@ b2 <-
   brm(data = o, family = student,
       y ~ 1 + x,
       prior = c(set_prior("normal(0, 100)", class = "Intercept"),
-                set_prior("normal(0, 10)", class = "b"),
-                set_prior("gamma(2, 0.1)", class = "nu"),
-                set_prior("cauchy(0, 1)", class = "sigma")))
+                set_prior("normal(0, 10)",  class = "b"),
+                set_prior("gamma(2, 0.1)",  class = "nu"),
+                set_prior("cauchy(0, 1)",   class = "sigma")))
 ```
 
 For the next model, we'll switch out that weak gamma(2, 0.1) for a stronger gamma(4, 1). In some disciplines, the gamma distribution is something of an exotic bird. So before fitting the model, it might be useful to take a peek at what these gamma priors looks like. In the plot, below, the orange density in the background is the default gamma(2, 0.1) and the purple density in the foreground is the stronger gamma(4, 1).
 
 ```{r, fig.width = 8, fig.height = 2.5}
-ggplot(data = tibble(x = seq(from = 0, to = 60, by = .1)),
-       aes(x = x)) +
+tibble(x = seq(from = 0, to = 60, by = .1)) %>% 
+  ggplot(aes(x = x)) +
   geom_ribbon(aes(ymin = 0, 
                   ymax = dgamma(x, 2, 0.1)),
               fill = viridis_pal(direction = 1, option = "C")(5)[4], alpha = 3/4) +
@@ -397,9 +395,9 @@ b3 <-
   brm(data = o, family = student,
       y ~ 1 + x,
       prior = c(set_prior("normal(0, 100)", class = "Intercept"),
-                set_prior("normal(0, 10)", class = "b"),
-                set_prior("gamma(4, 1)", class = "nu"),
-                set_prior("cauchy(0, 1)", class = "sigma")))
+                set_prior("normal(0, 10)",  class = "b"),
+                set_prior("gamma(4, 1)",    class = "nu"),
+                set_prior("cauchy(0, 1)",   class = "sigma")))
 ```
 
 For our final model, we'll fix the *nu* parameter in a `bf()` statement.
@@ -409,8 +407,8 @@ b4 <-
   brm(data = o, family = student,
       bf(y ~ 1 + x, nu = 4),
       prior = c(set_prior("normal(0, 100)", class = "Intercept"),
-                set_prior("normal(0, 10)", class = "b"),
-                set_prior("cauchy(0, 1)", class = "sigma")))
+                set_prior("normal(0, 10)",  class = "b"),
+                set_prior("cauchy(0, 1)",   class = "sigma")))
 ```
 
 Now we've got all those models, we can gather their results into a sole tibble.
@@ -477,21 +475,21 @@ loo_b4 <- loo(b4)
 With a little data wrangling, we can compare our models by how they look in our custom `pareto_k` diagnostic plots. 
 
 ```{r, fig.width = 8, fig.height = 5}
-loo_b1$pareto_k %>% 
+loo_b1$diagnostics$pareto_k %>% 
   as_tibble() %>%
   mutate(i = 1:n()) %>%
   bind_rows(
-    loo_b2$pareto_k %>% 
+    loo_b2$diagnostics$pareto_k %>% 
       as_tibble() %>%
       mutate(i = 1:n()) 
   ) %>%
   bind_rows(
-    loo_b3$pareto_k %>% 
+    loo_b3$diagnostics$pareto_k %>% 
       as_tibble() %>%
       mutate(i = 1:n()) 
   ) %>%
   bind_rows(
-    loo_b4$pareto_k %>% 
+    loo_b4$diagnostics$pareto_k %>% 
       as_tibble() %>%
       mutate(i = 1:n()) 
   ) %>%
@@ -549,8 +547,8 @@ fitted_bs <-
 # The plot
 ggplot(data = fitted_bs, 
        aes(x = x)) +
-  geom_ribbon(aes(ymin = `2.5%ile`,
-                  ymax = `97.5%ile`),
+  geom_ribbon(aes(ymin = Q2.5,
+                  ymax = Q97.5),
               fill = "grey67") +
   geom_line(aes(y = Estimate),
             color = "grey92") +
@@ -571,15 +569,7 @@ ggplot(data = fitted_bs,
 
 For each subplot, the gray band is the 95% interval band and the overlapping light gray line is the posterior mean. Model `b0`, recall, is our baseline comparison model. This is of the well-behaved no-outlier data, `d`, using the good old Gaussian likelihood. Model `b1` is of the outlier data, `o`, but still using the non-robust Gaussian likelihood. Model `b3` uses a robust Student's t likelihood with *nu* estimated with the fairly narrow gamma(4, 1) prior. For my money, `b3` did a pretty good job.
 
-Note. The analyses in this document were done with:
+```{r}
+sessionInfo()
+```
 
-* R         3.4.4
-* RStudio   1.1.442
-* rmarkdown 1.9
-* tidyverse 1.2.1
-* viridis   0.4.0
-* MASS      7.3-47
-* broom     0.4.3
-* brms      2.1.9
-* rstan     2.17.3
-* loo       1.1.0
