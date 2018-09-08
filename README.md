@@ -1,7 +1,7 @@
 Robust Linear Regression with Student’s T Distribution
 ======================================================
 
-The purpose of this project is to demonstrate the advantages of the Student's t distribution for regression with outliers, particularly within a [Bayesian framework](https://www.youtube.com/channel/UCNJK6_DZvcMqNSzQdEkzvzA/playlists).
+The purpose of this project is to demonstrate the advantages of the Student's *t* distribution for regression with outliers, particularly within a [Bayesian framework](https://www.youtube.com/channel/UCNJK6_DZvcMqNSzQdEkzvzA/playlists).
 
 For this project, I’m presuming you are familiar with linear regression, familiar with the basic differences between frequentist and Bayesian approaches to fitting regression models, and have a sense that the issue of outlier values is a pickle worth contending with. All code in is [R](https://www.r-bloggers.com/why-use-r-five-reasons/), with a heavy use of the [tidyverse](http://style.tidyverse.org)--which you might learn a lot about [here, especially chapter 5](http://r4ds.had.co.nzhttp://r4ds.had.co.nz)--, and the [brms](https://cran.r-project.org/web/packages/brms/index.html) package.
 
@@ -10,42 +10,37 @@ The problem
 
 Regression models typically use the Gaussian likelihood. The Gaussian likelihood is a sensible default choice for many data types. Unfortunately, the normal (i.e., Gaussian) distribution is sensitive to outliers.
 
-The normal distribution is a special case of Student's t distribution with the *nu* parameter (i.e., the degree of freedom) set to infinity. However, when *nu* is small, Student's t distribution is more robust to multivariate outliers. See [Gelman & Hill (2007, chapter 6)](http://www.stat.columbia.edu/~gelman/arm/) or [Kruschke (2014, chapter 16)](https://sites.google.com/site/doingbayesiandataanalysis/) for textbook treatments on the topic.
+The normal distribution is a special case of Student's *t* distribution with the *nu* parameter (i.e., the degree of freedom) set to infinity. However, when *nu* is small, Student's *t* distribution is more robust to multivariate outliers. See [Gelman & Hill (2007, chapter 6)](http://www.stat.columbia.edu/~gelman/arm/) or [Kruschke (2014, chapter 16)](https://sites.google.com/site/doingbayesiandataanalysis/) for textbook treatments on the topic.
 
-In this project, we demonstrate how vulnerable the Gaussian likelihood is to outliers and then compare it too different ways of using Student's t likelihood for the same data.
+In this project, we demonstrate how vulnerable the Gaussian likelihood is to outliers and then compare it too different ways of using Student's *t* likelihood for the same data.
 
 First, we'll get a sense of the distributions with a plot.
 
 ``` r
 library(tidyverse)
-library(viridis)
 
-ggplot(data = tibble(x = seq(from = -6, to = 6, by = .01)), aes(x = x)) +
-  geom_line(aes(y = dnorm(x))) +
-  geom_line(aes(y = dt(x, df = 10)),  # note how we've defined df by nu (i.e., df)
-            color = viridis_pal(direction = 1, option = "C")(6)[2]) +
-  geom_line(aes(y = dt(x, df = 5)),   # note how we've defined df by nu 
-            color = viridis_pal(direction = 1, option = "C")(6)[3]) +
-  geom_line(aes(y = dt(x, df = 2.5)), # note how we've defined df by nu 
-            color = viridis_pal(direction = 1, option = "C")(6)[4]) +
-  geom_line(aes(y = dt(x, df = 1)),   # note how we've defined df by nu 
-            color = viridis_pal(direction = 1, option = "C")(6)[5]) +
+tibble(x = seq(from = -6, to = 6, by = .01)) %>% 
+  expand(x, nu = c(1, 2.5, 5, 10, Inf)) %>% 
+  mutate(density = dt(x = x, df = nu),
+         nu      = factor(nu, levels = c("Inf", "10", "5", "2.5", "1"))) %>% 
+  
+  ggplot(aes(x = x, y = density, group = nu, color = nu)) +
+  geom_line() +
+  scale_color_viridis_d(expression(nu),
+                        direction = 1, option = "C", end = .85) +
   scale_y_continuous(NULL, breaks = NULL) +
   coord_cartesian(xlim = -5:5) +
-  labs(subtitle = "Gauss is in black. Student's t with nus of 10, 5, 2.5, and 1 range from purple to\norange.",
-       x = NULL) +
+  xlab(NULL) +
   theme(panel.grid = element_blank())
 ```
 
 ![](README_files/figure-markdown_github/unnamed-chunk-1-1.png)
 
-\[Asside: In this document, we make use of the handy [viridis package](https://cran.r-project.org/web/packages/viridis/vignettes/intro-to-viridis.html) for our color paletes.\]
-
-So the difference is that a Student's t with a low *nu* will have notably heavier tails than the conventional Gaussian distribution. It’s easiest to see the difference when *nu* approaches 1. Even then, the difference can be subtle when looking at a plot. Another way is to compare how probable relatively extreme values are in a Student's t distribution relative to the Gaussian. For the sake of demonstration, here we'll compare Gauss with Student's t with a *nu* of 5. In the plot above, they are clearly different, but not shockingly so. However, that difference is very notable in the tails.
+So the difference is that a Student's *t* with a low *nu* will have notably heavier tails than the conventional Gaussian distribution. It’s easiest to see the difference when *nu* approaches 1. Even then, the difference can be subtle when looking at a plot. Another way is to compare how probable relatively extreme values are in a Student's *t* distribution relative to the Gaussian. For the sake of demonstration, here we'll compare Gauss with Student's *t* with a *nu* of 5. In the plot above, they are clearly different, but not shockingly so. However, that difference is very notable in the tails.
 
 Let’s look closer with our table.
 
-In the table, below, we compare the probability of a given Z score or lower within the Gaussian and a *nu* = 5 Student's t. In the rightmost column, we compare the probabilities in a ratio.
+In the table, below, we compare the probability of a given Z score or lower within the Gaussian and a *nu* = 5 Student's *t*. In the rightmost column, we compare the probabilities in a ratio.
 
 ``` r
 # Here we pic our nu
@@ -68,7 +63,7 @@ tibble(Z_score               = 0:-5,
     ## 5      -4 0.00003     0.00516                163.  
     ## 6      -5 0           0.00205               7160.
 
-Note how low Z scores are more probable in this Student’s t than in the Gaussian. This is most apparent in the `Student/Gauss ratio` column on the right. A consequence of this is that extreme scores are less influential to your solutions when you use a small-*nu* Student’s t distribution in place of the Gaussian. That is, the small-*nu* Student’s t is more robust than the Gaussian to unusual and otherwise influential observations.
+Note how low Z scores are more probable in this Student’s *t* than in the Gaussian. This is most apparent in the `Student/Gauss ratio` column on the right. A consequence of this is that extreme scores are less influential to your solutions when you use a small-*nu* Student’s *t* distribution in place of the Gaussian. That is, the small-*nu* Student’s *t* is more robust than the Gaussian to unusual and otherwise influential observations.
 
 In order to demonstrate, let's simulate our own. We'll start by creating multivariate normal data.
 
@@ -97,10 +92,8 @@ With means of `0` and variances of `1`, our data are in a standardized metric.
 Third, we'll use the `mvrnorm()` function from the [MASS package](https://cran.r-project.org/web/packages/MASS/index.html) to simulate our data.
 
 ``` r
-library(MASS)
-
 set.seed(3)
-d <- mvrnorm(n = 100, mu = m, Sigma = s) %>%
+d <- MASS::mvrnorm(n = 100, mu = m, Sigma = s) %>%
   as_tibble() %>%
   rename(y = V1, x = V2)
 ```
@@ -223,7 +216,7 @@ ggplot(data = d, aes(x = x, y = y)) +
 ggplot(data = o, aes(x = x, y = y, color = y > 3)) +
   stat_smooth(method = "lm", color = "grey92", fill = "grey67", alpha = 1, fullrange = T) +
   geom_point(size = 1, alpha = 3/4) +
-  scale_color_manual(values = c("black", viridis_pal(direction = 1, option = "C")(7)[4])) +
+  scale_color_viridis_d(option = "A", end = 4/7) +
   scale_x_continuous(limits = c(-4, 4)) +
   coord_cartesian(xlim = -3:3, 
                   ylim = -3:5) +
@@ -257,7 +250,7 @@ glimpse(aug1)
     ## $ .cooksd    <dbl> 6.809587e-01, 3.820802e-01, 4.783890e-05, 6.480561e...
     ## $ .std.resid <dbl> 4.82755612, 3.85879897, -0.04552439, -0.17992001, -...
 
-Here we can compare the observations with Cook's distance, *D<sub>i</sub>* (i.e., `.cooksd`). Cook's *D<sub>i</sub>* is a measure of the influence of a given observation on the model. To compute *D<sub>i</sub>*, the model is fit once for each *n* case, after first dropping that case. Then the difference in the model with all observations and the model with all observations but the *i*th observation, as defined by the Euclidian distance between the estimators. [Fahrmeir et al (2013, p. 166)](http://www.springer.com/us/book/9783642343322#aboutBook) suggest that within the OLS framework "as a rule of thumb, observations with *D<sub>i</sub>* &gt; 0.5 are worthy of attention, and observations with *D<sub>i</sub>* &gt; 1 should always be examined." Here we plot *D<sub>i</sub>* against our observation index, *i*, for both models.
+Here we can compare the observations with Cook's distance, *D*<sub>*i*</sub> (i.e., `.cooksd`). Cook's *D*<sub>*i*</sub> is a measure of the influence of a given observation on the model. To compute *D*<sub>*i*</sub>, the model is fit once for each *n* case, after first dropping that case. Then the difference in the model with all observations and the model with all observations but the *i*th observation, as defined by the Euclidian distance between the estimators. [Fahrmeir et al (2013, p. 166)](http://www.springer.com/us/book/9783642343322#aboutBook) suggest that within the OLS framework "as a rule of thumb, observations with *D*<sub>*i*</sub> &gt; 0.5 are worthy of attention, and observations with *D*<sub>*i*</sub> &gt; 1 should always be examined." Here we plot *D*<sub>*i*</sub> against our observation index, *i*, for both models.
 
 ``` r
 aug0 %>%  # The well-behaived data
@@ -284,10 +277,10 @@ aug0 %>%  # The well-behaived data
 
 ![](README_files/figure-markdown_github/unnamed-chunk-14-1.png)
 
-For the model of the well-behaved data, `fit0`, we have *D<sub>i</sub>* values all hovering near zero. However, the plot for `fit1` shows one *D<sub>i</sub>* value well above the 0.5 level and another not quite that high but deviant relative to the rest. Our two outlier values look quite influential for the results of `fit1`.
+For the model of the well-behaved data, `fit0`, we have *D*<sub>*i*</sub>\* values all hovering near zero. However, the plot for `fit1` shows one *D*<sub>*i*</sub> value well above the 0.5 level and another not quite that high but deviant relative to the rest. Our two outlier values look quite influential for the results of `fit1`.
 
-Switching to a Bayesian framework
----------------------------------
+Switch to a Bayesian framework
+------------------------------
 
 In this project, we'll use the [brms package](https://cran.r-project.org/web/packages/brms/index.html) to fit our Bayesian regression models. You can learn a lot about brms [here](https://cran.r-project.org/web/packages/brms/vignettes/brms_overview.pdf) and [here](https://github.com/paul-buerkner/brms). To keep things simple, we'll use [weakly-regularizing priors](https://github.com/stan-dev/stan/wiki/Prior-Choice-Recommendations).
 
@@ -295,7 +288,7 @@ In this project, we'll use the [brms package](https://cran.r-project.org/web/pac
 library(brms)
 ```
 
-### Sticking with Gauss.
+### Stick with Gauss.
 
 For our first two Bayesian models, `b0` and `b1`, we'll use the conventional Gaussian likelihood (i.e., `family = gaussian` in the `brm()` function). Like with `fit01`, above, the first model is based on the nice `d` data. The second, `b1`, is based on the more-difficult `o` data.
 
@@ -303,16 +296,13 @@ For our first two Bayesian models, `b0` and `b1`, we'll use the conventional Gau
 b0 <- 
   brm(data = d, family = gaussian,
       y ~ 1 + x,
-      prior = c(set_prior("normal(0, 100)", class = "Intercept"),
-                set_prior("normal(0, 10)",  class = "b"),
-                set_prior("cauchy(0, 1)",   class = "sigma")))
+      prior = c(prior(normal(0, 100), class = Intercept),
+                prior(normal(0, 10),  class = b),
+                prior(cauchy(0, 1),   class = sigma)))
 
 b1 <- 
-  brm(data = o, family = gaussian,
-      y ~ 1 + x,
-      prior = c(set_prior("normal(0, 100)", class = "Intercept"),
-                set_prior("normal(0, 10)",  class = "b"),
-                set_prior("cauchy(0, 1)",   class = "sigma")))
+  update(b0, 
+         newdata = o)
 ```
 
 Here are the model summaries.
@@ -470,24 +460,16 @@ So with `b0`--the model based on the well-behaved multivariate normal data, `d`-
 
 #### What do we do with those overly-influential outlying values?
 
-A typical way to handle outlying values is to delete them based on some criterion, such as the Mahalanobis distance, Cook's *D<sub>i</sub>*, or our new friend the `pareto_k`. In our next two models, we'll do that. In our `data` arguments, we can use the `slice()` function to omit cases. In model `b1.1`, we simply omit the first and most influential case. In model `b1.2`, we omitted both unduly-influential cases, the values from rows 1 and 2.
+A typical way to handle outlying values is to delete them based on some criterion, such as the Mahalanobis distance, Cook's *D*<sub>*i*</sub>, or our new friend the `pareto_k`. In our next two models, we'll do that. In our `data` arguments, we can use the `slice()` function to omit cases. In model `b1.1`, we simply omit the first and most influential case. In model `b1.2`, we omitted both unduly-influential cases, the values from rows 1 and 2.
 
 ``` r
 b1.1 <- 
-  brm(data = o %>% slice(2:100), 
-      family = gaussian,
-      y ~ 1 + x,
-      prior = c(set_prior("normal(0, 100)", class = "Intercept"),
-                set_prior("normal(0, 10)",  class = "b"),
-                set_prior("cauchy(0, 1)",   class = "sigma")))
+  update(b1, 
+         newdata = o %>% slice(2:100))
 
 b1.2 <- 
-  brm(data = o %>% slice(3:100), 
-      family = gaussian,
-      y ~ 1 + x,
-      prior = c(set_prior("normal(0, 100)", class = "Intercept"),
-                set_prior("normal(0, 10)",  class = "b"),
-                set_prior("cauchy(0, 1)",   class = "sigma")))
+  update(b1, 
+         newdata = o %>% slice(3:100))
 ```
 
 Here are the summaries for our models based on the `slice[d]` data.
@@ -510,36 +492,42 @@ tidy(b1.2) %>% slice(1:3) %>% mutate_if(is.double, round, digits = 2)
     ## 2         b_x     0.40      0.10  0.23  0.57
     ## 3       sigma     0.86      0.06  0.76  0.97
 
-They are closer to the true data generating model (i.e., the code we used to make `d`), especially `b1.2`. However, there are other ways to handle the influential cases without dropping them. Finally, we're ready to switch to Student's t!
+They are closer to the true data generating model (i.e., the code we used to make `d`), especially `b1.2`. However, there are other ways to handle the influential cases without dropping them. Finally, we're ready to switch to Student's *t*!
 
-### Time to leave Gauss for the more general Student's t
+### Time to leave Gauss for the more general Student's *t*
 
-Recall that the normal distribution is equivalent to a Student's t with the degrees of freedom parameter, *nu*, set to infinity. That is, *nu* is fixed. Here we'll relax that assumption and estimate *nu* from the data just like we estimate *mu* with the linear model and *sigma* as the residual spread. Since *nu*'s now a parameter, we'll have to give it a prior. For our first Student's t model, we'll estimate *nu* with the brms default gamma(2, 0.1) prior.
+Recall that the normal distribution is equivalent to a Student's *t* with the degrees of freedom parameter, *nu*, set to infinity. That is, *nu* is fixed. Here we'll relax that assumption and estimate *nu* from the data just like we estimate *mu* with the linear model and *sigma* as the residual spread. Since *nu*'s now a parameter, we'll have to give it a prior. For our first Student's *t* model, we'll estimate *nu* with the brms default gamma(2, 0.1) prior.
 
 ``` r
 b2 <- 
   brm(data = o, family = student,
       y ~ 1 + x,
-      prior = c(set_prior("normal(0, 100)", class = "Intercept"),
-                set_prior("normal(0, 10)",  class = "b"),
-                set_prior("gamma(2, 0.1)",  class = "nu"),
-                set_prior("cauchy(0, 1)",   class = "sigma")))
+      prior = c(prior(normal(0, 100), class = Intercept),
+                prior(normal(0, 10),  class = b),
+                prior(gamma(2, 0.1),  class = nu),
+                prior(cauchy(0, 1),   class = sigma)))
 ```
 
 For the next model, we'll switch out that weak gamma(2, 0.1) for a stronger gamma(4, 1). In some disciplines, the gamma distribution is something of an exotic bird. So before fitting the model, it might be useful to take a peek at what these gamma priors looks like. In the plot, below, the orange density in the background is the default gamma(2, 0.1) and the purple density in the foreground is the stronger gamma(4, 1).
 
 ``` r
+# data
 tibble(x = seq(from = 0, to = 60, by = .1)) %>% 
-  ggplot(aes(x = x)) +
-  geom_ribbon(aes(ymin = 0, 
-                  ymax = dgamma(x, 2, 0.1)),
-              fill = viridis_pal(direction = 1, option = "C")(5)[4], alpha = 3/4) +
-  geom_ribbon(aes(ymin = 0, 
-                  ymax = dgamma(x, 4, 1)),
-              fill = viridis_pal(direction = 1, option = "C")(5)[2], alpha = 3/4) +
+  expand(x, nesting(alpha = c(2, 4), 
+                    beta  = c(0.1, 1))) %>% 
+  mutate(density = dgamma(x, alpha, beta),
+         group   = rep(letters[1:2], times = n() / 2)) %>% 
+  
+  # plot
+  ggplot(aes(x = x, ymin = 0, ymax = density, 
+             group = group, fill = group)) +
+  geom_ribbon(size = 0, alpha = 3/4) +
+  scale_fill_viridis_d(option = "B", direction = -1, 
+                       begin = 1/3, end = 2/3) +
   scale_y_continuous(NULL, breaks = NULL) +
   coord_cartesian(xlim = 0:50) +
-  theme(panel.grid = element_blank())
+  theme(panel.grid      = element_blank(),
+        legend.position = "none")
 ```
 
 ![](README_files/figure-markdown_github/unnamed-chunk-28-1.png)
@@ -548,12 +536,11 @@ So the default prior is centered around values in the 2 to 30 range, but has a l
 
 ``` r
 b3 <- 
-  brm(data = o, family = student,
-      y ~ 1 + x,
-      prior = c(set_prior("normal(0, 100)", class = "Intercept"),
-                set_prior("normal(0, 10)",  class = "b"),
-                set_prior("gamma(4, 1)",    class = "nu"),
-                set_prior("cauchy(0, 1)",   class = "sigma")))
+  update(b2,
+         prior = c(prior(normal(0, 100), class = Intercept),
+                   prior(normal(0, 10),  class = b),
+                   prior(gamma(4, 1),    class = nu),
+                   prior(cauchy(0, 1),   class = sigma)))
 ```
 
 For our final model, we'll fix the *nu* parameter in a `bf()` statement.
@@ -562,26 +549,22 @@ For our final model, we'll fix the *nu* parameter in a `bf()` statement.
 b4 <-
   brm(data = o, family = student,
       bf(y ~ 1 + x, nu = 4),
-      prior = c(set_prior("normal(0, 100)", class = "Intercept"),
-                set_prior("normal(0, 10)",  class = "b"),
-                set_prior("cauchy(0, 1)",   class = "sigma")))
+      prior = c(prior(normal(0, 100), class = Intercept),
+                prior(normal(0, 10),  class = b),
+                prior(cauchy(0, 1),   class = sigma)))
 ```
 
 Now we've got all those models, we can gather their results into a sole tibble.
 
 ``` r
-# We have to detach MASS and reload tidyverse so we might use tidyverse::select()
-detach(package:MASS, unload = T)
-library(tidyverse)
-
 b_estimates <-
   tidy(b0) %>%
-  bind_rows(tidy(b1)) %>%
-  bind_rows(tidy(b1.1)) %>%
-  bind_rows(tidy(b1.2)) %>%
-  bind_rows(tidy(b2)) %>%
-  bind_rows(tidy(b3)) %>%
-  bind_rows(tidy(b4)) %>%
+  bind_rows(tidy(b1),
+            tidy(b1.1),
+            tidy(b1.2),
+            tidy(b2),
+            tidy(b3),
+            tidy(b4)) %>%
   filter(term %in% c("b_Intercept", "b_x")) %>%
   mutate(model = rep(c("b0", "b1", "b1.1", "b1.2", "b2", "b3", "b4"), each = 2)) %>%
   select(model, everything()) %>%
@@ -618,23 +601,23 @@ b_estimates %>%
   filter(term == "b_x") %>% # b_Intercept b_x
   
   ggplot(aes(x = model)) +
-  geom_pointrange(aes(y = estimate,
+  geom_pointrange(aes(y    = estimate,
                       ymin = lower,
                       ymax = upper),
                   shape = 20) +
   coord_flip(ylim = c(-.2, 1)) +
-  labs(title = "The x slope, varying by model",
+  labs(title    = "The x slope, varying by model",
        subtitle = "The dots are the posterior means and the lines the percentile-based 95% intervals.",
-       x = NULL,
-       y = NULL) +
-  theme(panel.grid = element_blank(),
+       x        = NULL,
+       y        = NULL) +
+  theme(panel.grid   = element_blank(),
         axis.ticks.y = element_blank(),
-        axis.text.y = element_text(hjust = 0))
+        axis.text.y  = element_text(hjust = 0))
 ```
 
 ![](README_files/figure-markdown_github/unnamed-chunk-33-1.png)
 
-You might think of the `b0` slope as the "true" slope. That's the one estimated from the well-behaved multivariate normal data, `d`. That estimate's just where we'd want it to be. The `b1` slope is a disaster--way lower than the others. The slopes for `b1.1` and `b1.2` get better, but at the expense of deleting data. All three of our Student's t models produced slopes that were pretty close to the `b0` slope. They weren't perfect, but, all in all, Students t did pretty okay.
+You might think of the `b0` slope as the "true" slope. That's the one estimated from the well-behaved multivariate normal data, `d`. That estimate's just where we'd want it to be. The `b1` slope is a disaster--way lower than the others. The slopes for `b1.1` and `b1.2` get better, but at the expense of deleting data. All three of our Student's *t* models produced slopes that were pretty close to the `b0` slope. They weren't perfect, but, all in all, Students *t* did pretty okay.
 
 ### We need more LOO and more `pareto_k`.
 
@@ -653,36 +636,37 @@ loo_b1$diagnostics$pareto_k %>%
   as_tibble() %>%
   mutate(i = 1:n()) %>%
   bind_rows(
+    # add loo_b2
     loo_b2$diagnostics$pareto_k %>% 
       as_tibble() %>%
-      mutate(i = 1:n()) 
-  ) %>%
-  bind_rows(
+      mutate(i = 1:n()),
+    
+    # add loo_b3
     loo_b3$diagnostics$pareto_k %>% 
       as_tibble() %>%
-      mutate(i = 1:n()) 
-  ) %>%
-  bind_rows(
+      mutate(i = 1:n()),
+    
+    # add loo_b4
     loo_b4$diagnostics$pareto_k %>% 
       as_tibble() %>%
       mutate(i = 1:n()) 
   ) %>%
   rename(pareto_k = value) %>%
-  mutate(fit = rep(c("fit b1", "fit b2", "fit b3", "fit b4"), each = n()/4)) %>%
+  mutate(fit = rep(c("fit b1", "fit b2", "fit b3", "fit b4"), each = n() / 4)) %>%
 
   ggplot(aes(x = i, y = pareto_k)) +
   geom_hline(yintercept = c(.5, .7),
              color = "white") +
   geom_point(alpha = .5) +
   scale_y_continuous(breaks = c(0, .5, .7)) +
-  theme(panel.grid = element_blank(),
+  theme(panel.grid   = element_blank(),
         axis.title.x = element_text(face = "italic", family = "Times")) +
     facet_wrap(~fit)
 ```
 
 ![](README_files/figure-markdown_github/unnamed-chunk-35-1.png)
 
-Oh man, those Student's t models made our world shiny! In a succession from `b2` through `b4`, each model looked better by `pareto_k`. All were way better than the typical Gaussian model, `b1`. While we're at it, we might compare those for with their LOO values.
+Oh man, those Student's *t* models made our world shiny! In a succession from `b2` through `b4`, each model looked better by `pareto_k`. All were way better than the typical Gaussian model, `b1`. While we're at it, we might compare those for with their LOO values.
 
 ``` r
 compare_ic(loo_b1, loo_b2, loo_b3, loo_b4)
@@ -712,18 +696,17 @@ That's enough with coefficients, `pareto_k`, and the LOO. Let's get a sense of t
 # These are the values of x we'd like model-implied summaries for
 nd <- tibble(x = seq(from = -4, to = 4, length.out = 50))
 
-# We get the model-implied summaries with a big fitted() object
+# We get the model-implied summaries with a big `fitted()` object
 fitted_bs <- 
-  # for b0
+  # `b0`
   fitted(b0, newdata = nd) %>%
   as_tibble() %>%
-  # for b1
   bind_rows(
+    # add `b1`
     fitted(b1, newdata = nd) %>%
-      as_tibble()
-  ) %>% 
-  # for b3
-  bind_rows(
+      as_tibble(),
+    
+    # add `b3`
     fitted(b3, newdata = nd) %>%
       as_tibble()
   ) %>% 
@@ -733,31 +716,30 @@ fitted_bs <-
   mutate(x = rep(nd %>% pull(), times = 3))
 
 # The plot
-ggplot(data = fitted_bs, 
-       aes(x = x)) +
+fitted_bs %>% 
+  ggplot(aes(x = x)) +
   geom_ribbon(aes(ymin = Q2.5,
                   ymax = Q97.5),
               fill = "grey67") +
   geom_line(aes(y = Estimate),
             color = "grey92") +
   geom_point(data = d %>%
-               bind_rows(o) %>%
-               bind_rows(o) %>%
+               bind_rows(o, o) %>%
                mutate(model = rep(c("b0", "b1", "b3"), each = 100)), 
              aes(x = x, y = y, color = y > 3),
              size = 1, alpha = 3/4) +
-  scale_color_manual(values = c("black", viridis_pal(direction = 1, option = "C")(7)[4])) +
+  scale_color_viridis_d(option = "A", end = 4/7) +
   coord_cartesian(xlim = -3:3, 
                   ylim = -3:5) +
   ylab(NULL) +
-  theme(panel.grid = element_blank(),
+  theme(panel.grid      = element_blank(),
         legend.position = "none") +
   facet_wrap(~model)
 ```
 
 ![](README_files/figure-markdown_github/unnamed-chunk-37-1.png)
 
-For each subplot, the gray band is the 95% interval band and the overlapping light gray line is the posterior mean. Model `b0`, recall, is our baseline comparison model. This is of the well-behaved no-outlier data, `d`, using the good old Gaussian likelihood. Model `b1` is of the outlier data, `o`, but still using the non-robust Gaussian likelihood. Model `b3` uses a robust Student's t likelihood with *nu* estimated with the fairly narrow gamma(4, 1) prior. For my money, `b3` did a pretty good job.
+For each subplot, the gray band is the 95% interval band and the overlapping light gray line is the posterior mean. Model `b0`, recall, is our baseline comparison model. This is of the well-behaved no-outlier data, `d`, using the good old Gaussian likelihood. Model `b1` is of the outlier data, `o`, but still using the non-robust Gaussian likelihood. Model `b3` uses a robust Student's *t* likelihood with *nu* estimated with the fairly narrow gamma(4, 1) prior. For my money, `b3` did a pretty good job.
 
 ``` r
 sessionInfo()
@@ -765,7 +747,7 @@ sessionInfo()
 
     ## R version 3.5.1 (2018-07-02)
     ## Platform: x86_64-apple-darwin15.6.0 (64-bit)
-    ## Running under: macOS High Sierra 10.13.4
+    ## Running under: macOS High Sierra 10.13.6
     ## 
     ## Matrix products: default
     ## BLAS: /Library/Frameworks/R.framework/Versions/3.5/Resources/lib/libRblas.0.dylib
@@ -778,15 +760,13 @@ sessionInfo()
     ## [1] stats     graphics  grDevices utils     datasets  methods   base     
     ## 
     ## other attached packages:
-    ##  [1] loo_2.0.0         brms_2.3.4        Rcpp_0.12.17     
-    ##  [4] broom_0.4.5       bindrcpp_0.2.2    viridis_0.5.1    
-    ##  [7] viridisLite_0.3.0 forcats_0.3.0     stringr_1.3.1    
-    ## [10] dplyr_0.7.6       purrr_0.2.5       readr_1.1.1      
-    ## [13] tidyr_0.8.1       tibble_1.4.2      ggplot2_3.0.0    
-    ## [16] tidyverse_1.2.1  
+    ##  [1] loo_2.0.0       brms_2.4.0      Rcpp_0.12.18    broom_0.4.5    
+    ##  [5] bindrcpp_0.2.2  forcats_0.3.0   stringr_1.3.1   dplyr_0.7.6    
+    ##  [9] purrr_0.2.5     readr_1.1.1     tidyr_0.8.1     tibble_1.4.2   
+    ## [13] ggplot2_3.0.0   tidyverse_1.2.1
     ## 
     ## loaded via a namespace (and not attached):
-    ##  [1] nlme_3.1-137         matrixStats_0.53.1   xts_0.10-2          
+    ##  [1] nlme_3.1-137         matrixStats_0.54.0   xts_0.10-2          
     ##  [4] lubridate_1.7.4      threejs_0.3.1        httr_1.3.1          
     ##  [7] rprojroot_1.3-2      rstan_2.17.3         tools_3.5.1         
     ## [10] backports_1.1.2      utf8_1.1.4           R6_2.2.2            
@@ -794,7 +774,7 @@ sessionInfo()
     ## [16] withr_2.1.2          tidyselect_0.2.4     gridExtra_2.3       
     ## [19] mnormt_1.5-5         Brobdingnag_1.2-5    compiler_3.5.1      
     ## [22] cli_1.0.0            rvest_0.3.2          shinyjs_1.0         
-    ## [25] xml2_1.2.0           colourpicker_1.0     labeling_0.3        
+    ## [25] xml2_1.2.0           labeling_0.3         colourpicker_1.0    
     ## [28] scales_0.5.0         dygraphs_1.1.1.5     mvtnorm_1.0-8       
     ## [31] psych_1.8.4          ggridges_0.5.0       digest_0.6.15       
     ## [34] StanHeaders_2.17.2   foreign_0.8-70       rmarkdown_1.10      
@@ -803,16 +783,17 @@ sessionInfo()
     ## [43] rstudioapi_0.7       shiny_1.1.0          bindr_0.1.1         
     ## [46] zoo_1.8-2            jsonlite_1.5         gtools_3.8.1        
     ## [49] crosstalk_1.0.0      inline_0.3.15        magrittr_1.5        
-    ## [52] bayesplot_1.5.0      Matrix_1.2-14        munsell_0.5.0       
+    ## [52] bayesplot_1.6.0      Matrix_1.2-14        munsell_0.5.0       
     ## [55] abind_1.4-5          stringi_1.2.3        yaml_2.1.19         
-    ## [58] plyr_1.8.4           grid_3.5.1           parallel_3.5.1      
-    ## [61] promises_1.0.1       crayon_1.3.4         miniUI_0.1.1.1      
-    ## [64] lattice_0.20-35      haven_1.1.2          hms_0.4.2           
-    ## [67] knitr_1.20           pillar_1.2.3         igraph_1.2.1        
-    ## [70] markdown_0.8         shinystan_2.5.0      codetools_0.2-15    
-    ## [73] reshape2_1.4.3       stats4_3.5.1         rstantools_1.5.0    
-    ## [76] glue_1.2.0           evaluate_0.10.1      modelr_0.1.2        
-    ## [79] httpuv_1.4.4.2       cellranger_1.1.0     gtable_0.2.0        
-    ## [82] assertthat_0.2.0     mime_0.5             xtable_1.8-2        
-    ## [85] coda_0.19-1          later_0.7.3          rsconnect_0.8.8     
-    ## [88] shinythemes_1.1.1    bridgesampling_0.4-0
+    ## [58] MASS_7.3-50          plyr_1.8.4           grid_3.5.1          
+    ## [61] parallel_3.5.1       promises_1.0.1       crayon_1.3.4        
+    ## [64] miniUI_0.1.1.1       lattice_0.20-35      haven_1.1.2         
+    ## [67] hms_0.4.2            knitr_1.20           pillar_1.2.3        
+    ## [70] igraph_1.2.1         markdown_0.8         shinystan_2.5.0     
+    ## [73] codetools_0.2-15     reshape2_1.4.3       stats4_3.5.1        
+    ## [76] rstantools_1.5.0     glue_1.2.0           evaluate_0.10.1     
+    ## [79] modelr_0.1.2         httpuv_1.4.4.2       cellranger_1.1.0    
+    ## [82] gtable_0.2.0         assertthat_0.2.0     mime_0.5            
+    ## [85] xtable_1.8-2         coda_0.19-1          later_0.7.3         
+    ## [88] rsconnect_0.8.8      viridisLite_0.3.0    shinythemes_1.1.1   
+    ## [91] bridgesampling_0.4-0
