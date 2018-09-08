@@ -277,7 +277,7 @@ aug0 %>%  # The well-behaived data
 
 ![](README_files/figure-markdown_github/unnamed-chunk-14-1.png)
 
-For the model of the well-behaved data, `fit0`, we have *D*<sub>*i*</sub>\* values all hovering near zero. However, the plot for `fit1` shows one *D*<sub>*i*</sub> value well above the 0.5 level and another not quite that high but deviant relative to the rest. Our two outlier values look quite influential for the results of `fit1`.
+For the model of the well-behaved data, `fit0`, we have *D*<sub>*i*</sub> values all hovering near zero. However, the plot for `fit1` shows one *D*<sub>*i*</sub> value well above the 0.5 level and another not quite that high but deviant relative to the rest. Our two outlier values look quite influential for the results of `fit1`.
 
 Switch to a Bayesian framework
 ------------------------------

@@ -208,7 +208,7 @@ aug0 %>%  # The well-behaived data
     facet_wrap(~fit)
 ```
 
-For the model of the well-behaved data, `fit0`, we have $D_i$* values all hovering near zero. However, the plot for `fit1` shows one $D_i$ value well above the 0.5 level and another not quite that high but deviant relative to the rest. Our two outlier values look quite influential for the results of `fit1`.
+For the model of the well-behaved data, `fit0`, we have $D_i$ values all hovering near zero. However, the plot for `fit1` shows one $D_i$ value well above the 0.5 level and another not quite that high but deviant relative to the rest. Our two outlier values look quite influential for the results of `fit1`.
 
 ## Switch to a Bayesian framework
 
